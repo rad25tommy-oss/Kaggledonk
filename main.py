@@ -382,7 +382,10 @@ POLICY_CONFIG_JSON = r'''{
       "petrelArianaBonus": 4600,
       "factoryBeforeArianaBonus": 34000,
       "factoryBeforeArianaDrawGainBonus": 8000,
-      "factoryBeforeArianaPenalty": 6000
+      "factoryBeforeArianaPenalty": 6000,
+      "factoryArianaBurstBonus": 30000,
+      "factoryArianaBurstPerCardBonus": 4500,
+      "factoryArianaBurstEarlyBonus": 8000
     },
     "pokePadEvolutionAttack": {
       "enabled": true,
@@ -3978,6 +3981,30 @@ def _factory_before_ariana_option_index(observation, options):
     return None
 
 
+def _factory_ariana_burst_score(observation, player, current, athena_draw_count, hand_ids, stadium_ids):
+    if not _policy_rule_enabled("preferArianaEnergyDig"):
+        return 0
+    if athena_draw_count < 3 or _deck_count(player) <= 0:
+        return 0
+
+    factory_available = (
+        FACTORY in stadium_ids
+        or FACTORY in hand_ids
+        or (not _stadium_played_this_turn(current, player) and _factory_option_available(observation))
+    )
+    if not factory_available:
+        return 0
+
+    capped_draw = min(athena_draw_count, _deck_count(player))
+    score = _policy_rule_number("preferArianaEnergyDig", "factoryArianaBurstBonus", 30_000)
+    score += capped_draw * _policy_rule_number("preferArianaEnergyDig", "factoryArianaBurstPerCardBonus", 4_500)
+    if _turn_number(current) <= 3:
+        score += _policy_rule_number("preferArianaEnergyDig", "factoryArianaBurstEarlyBonus", 8_000)
+    if FACTORY in stadium_ids:
+        score += 4_000
+    return score
+
+
 def _honchkrow_chain_available(player, hand_ids=None, deck_ids=None):
     if hand_ids is None:
         hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
@@ -5173,6 +5200,14 @@ def _main_action_score(observation, option, turn_plan=None):
                 score += 7_500
             if has_rocket_feather_action and hand_supporters < 3:
                 score += 3_500
+            score += _factory_ariana_burst_score(
+                observation,
+                player,
+                current,
+                athena_draw_count,
+                hand_ids,
+                stadium_ids,
+            )
             if FACTORY in [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]:
                 score += 1_300
             score += max(0, 3 - hand_supporters) * 1_350
