@@ -4425,7 +4425,10 @@ def _choose_optional_cards(observation, options, max_count):
                 elif identifier == MIRACLE_HEADSET:
                     score += 2_900 if active_honchkrow and hand_supporters < 3 and discard_supporters > 0 else -900
                 elif identifier == FACTORY:
-                    score += 52_000 if petrel_should_chain_factory else (18_000 if supporter_played and FACTORY not in stadium_ids else 520)
+                    if _factory_in_hand(player) or FACTORY in stadium_ids:
+                        score -= 100_000
+                    else:
+                        score += 52_000 if petrel_should_chain_factory else (18_000 if supporter_played and FACTORY not in stadium_ids else 520)
                     if not supporter_played and energy_dig_needed and ARIANA in hand_ids:
                         score -= _policy_rule_number("preferArianaEnergyDig", "factoryBeforeArianaPenalty", 6_000)
                 elif identifier == ARIANA:
