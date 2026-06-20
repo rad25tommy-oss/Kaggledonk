@@ -4409,7 +4409,12 @@ def _choose_optional_cards(observation, options, max_count):
                     elif identifier == GIOVANNI:
                         score = max(11_000, giovanni_fuel_search_score())
                     elif identifier == PROTON:
-                        score = -_policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
+                        if proton_opening_allowed:
+                            score += _policy_rule_number("preferProtonWhenSetupIncomplete", "transceiverSetupBonus", 3_200)
+                        else:
+                            score -= _policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
+                    if energy_murkrow_needs_honchkrow:
+                        score -= 3_400
                 elif has_proton_in_hand:
                     if identifier == ARIANA:
                         score = 40_000 + (6_000 if energy_dig_needed or athena_draw_count >= 3 else 0)
