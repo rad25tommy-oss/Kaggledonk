@@ -1066,6 +1066,11 @@ class DonkrowPolicy:
         if candidate.kind == "switch":
             if contains_any(text, ("honchkrow", "porygon2", "porygon-z", "ドンカラス", "ポリゴン2", "ポリゴンz")):
                 score += 340.0
+            if contains_any(text, ("ドンカラス", "honchkrow")) and _donkarasu_can_ko_from_bench(context.observation):
+                current, your_index, player = _current_player(context.observation)
+                active_card = _top_card(_read(player, "active", []))
+                if _card_id(active_card) != HONCHKROW:
+                    score += 2000.0
             if context.has_ko_attack:
                 score += 220.0
 
@@ -3438,6 +3443,48 @@ def _planned_energy_available(player, attacker, attack_id):
     if attacker_id == MURKROW and attack_id in MURKROW_ATTACKS:
         return TEAM_ROCKET_ENERGY in hand_ids
     return False
+
+def _donkarasu_can_ko_from_bench(observation):
+    """ベンチのドンカラスがロケットフェザーで相手をKOできるか判定"""
+    current, your_index, player = _current_player(observation)
+    
+    # ベンチからドンカラス取得
+    bench = _read(player, "bench", [])
+    honchkrow_from_bench = None
+    if isinstance(bench, list):
+        for slot in bench:
+            card = _top_card(slot)
+            if _card_id(card) == HONCHKROW:
+                honchkrow_from_bench = card
+                break
+    
+    if honchkrow_from_bench is None:
+        return False
+    
+    # ドンカラスがエネルギーを持っているか確認
+    energy_cards = _attached_energy_cards(honchkrow_from_bench)
+    if energy_cards <= 0:
+        return False
+    
+    # 相手のアクティブHP取得
+    opponent_active = _opponent_active_card(observation)
+    if opponent_active is None:
+        return False
+    target_hp = _remaining_hp(opponent_active)
+    if target_hp <= 0:
+        return False
+    
+    # ロケットフェザーのダメージ/サポーター計算
+    damage_per_supporter = _rocket_feather_damage_per_supporter(opponent_active)
+    
+    # 相手をKOするために必要なサポーター枚数（切り上げ）
+    required_supporters = (target_hp + damage_per_supporter - 1) // damage_per_supporter
+    
+    # 手札のロケットサポーター枚数
+    hand_supporters = _count_cards(player, ("hand",), lambda card_id: card_id in ROCKET_SUPPORTERS)
+    
+    # 必要なサポーター枚数以上あるか
+    return hand_supporters >= required_supporters
 
 
 def _turn_plan_score(player, target, damage, can_ko, prize_count, needs_energy, needs_switch, seed_guard_blocked):
