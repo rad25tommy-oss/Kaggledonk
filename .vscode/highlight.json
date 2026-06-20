@@ -1,0 +1,14 @@
+[
+  {
+    "label": "Modified Code",
+    "pattern": "# MODIFIED:|# CHANGED:",
+    "color": "#FFD700",
+    "backgroundColor": "#664400"
+  },
+  {
+    "label": "Fix Applied",
+    "pattern": "# FIX:|# FIXED:",
+    "color": "#00FF00",
+    "backgroundColor": "#004400"
+  }
+]

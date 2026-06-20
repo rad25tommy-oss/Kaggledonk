@@ -1,0 +1,19 @@
+{
+  "workbench.colorCustomizations": {
+    "editor.findMatchBackground": "#FFD700",
+    "editor.findMatchBorder": "#FFA500",
+    "editor.findMatchHighlightBackground": "#FFFF00",
+    "editor.selectionBackground": "#0066CC80"
+  },
+  "editor.tokenColorCustomizations": {
+    "comments": {
+      "fontStyle": "italic"
+    }
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true
+  },
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true
+}
