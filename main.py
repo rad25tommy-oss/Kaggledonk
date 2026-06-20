@@ -5031,7 +5031,7 @@ def _main_action_score(observation, option, turn_plan=None):
                 if hand_supporters <= 0:
                     return 700
                 if not target_is_active and not has_switch_option:
-                    return _policy_rule_number("avoidIgnitionWaste", "benchWithoutSwitchPenalty", -15_000)
+                    return _policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000)
                 score = _policy_rule_number("avoidIgnitionWaste", "honchkrowActiveAttackScore", 15_800) if target_is_active else _policy_rule_number("avoidIgnitionWaste", "honchkrowSwitchableAttackScore", 10_200)
                 required_for_ko = max(1, (opponent_active_hp + 59) // 60) if opponent_active_hp > 0 else 1
                 if hand_supporters >= required_for_ko:
