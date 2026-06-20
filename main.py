@@ -380,6 +380,8 @@ POLICY_CONFIG_JSON = r'''{
       "transceiverArianaBonus": 8800,
       "pokegearArianaBonus": 5200,
       "petrelArianaBonus": 4600,
+      "factoryBeforeArianaBonus": 34000,
+      "factoryBeforeArianaDrawGainBonus": 8000,
       "factoryBeforeArianaPenalty": 6000
     },
     "pokePadEvolutionAttack": {
@@ -3920,6 +3922,62 @@ def _factory_option_available(observation):
     return False
 
 
+def _factory_before_ariana_score(observation):
+    if not _policy_rule_enabled("compressBeforeAriana"):
+        return None
+
+    current, _, player = _current_player(observation)
+    if _supporter_played_this_turn(current, player) or _stadium_played_this_turn(current, player):
+        return None
+
+    stadium_ids = [_card_id(card) for card in _iter_cards(_read(current, "stadium", []))]
+    if FACTORY in stadium_ids:
+        return None
+
+    select = _read(observation, "select", {})
+    options = _select_options(select)
+    has_factory_play = any(
+        _card_id(_card_from_option(observation, option)) == FACTORY and _option_type(option) in (7, "play")
+        for option in options
+    )
+    has_ariana_play = any(
+        _card_id(_card_from_option(observation, option)) == ARIANA and _option_type(option) in (7, "play")
+        for option in options
+    )
+    if not has_factory_play or not has_ariana_play:
+        return None
+
+    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
+    if FACTORY not in hand_ids or ARIANA not in hand_ids:
+        return None
+
+    hand_count = _hand_count(player)
+    target_hand = 8 if _all_field_pokemon_are_rocket(player) else 5
+    current_draw = max(0, target_hand - max(0, hand_count - 1))
+    factory_first_draw = max(0, target_hand - max(0, hand_count - 2))
+    deck_count = _deck_count(player)
+    draw_gain = min(deck_count, factory_first_draw) - min(deck_count, current_draw)
+    if draw_gain <= 0:
+        return None
+
+    score = _policy_rule_number("preferArianaEnergyDig", "factoryBeforeArianaBonus", 34_000)
+    score += draw_gain * _policy_rule_number("preferArianaEnergyDig", "factoryBeforeArianaDrawGainBonus", 8_000)
+    if current_draw <= _policy_rule_number("compressBeforeAriana", "lowDrawMax", 2) and hand_count >= _policy_rule_number("compressBeforeAriana", "highHandMin", 7):
+        score += 4_000
+    if _needs_ariana_energy_dig(player):
+        score += 4_000
+    return score
+
+
+def _factory_before_ariana_option_index(observation, options):
+    if _factory_before_ariana_score(observation) is None:
+        return None
+    for option_index, option in enumerate(options):
+        if _card_id(_card_from_option(observation, option)) == FACTORY and _option_type(option) in (7, "play"):
+            return option_index
+    return None
+
+
 def _honchkrow_chain_available(player, hand_ids=None, deck_ids=None):
     if hand_ids is None:
         hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
@@ -4409,12 +4467,7 @@ def _choose_optional_cards(observation, options, max_count):
                     elif identifier == GIOVANNI:
                         score = max(11_000, giovanni_fuel_search_score())
                     elif identifier == PROTON:
-                        if proton_opening_allowed:
-                            score += _policy_rule_number("preferProtonWhenSetupIncomplete", "transceiverSetupBonus", 3_200)
-                        else:
-                            score -= _policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
-                    if energy_murkrow_needs_honchkrow:
-                        score -= 3_400
+                        score = -_policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
                 elif has_proton_in_hand:
                     if identifier == ARIANA:
                         score = 40_000 + (6_000 if energy_dig_needed or athena_draw_count >= 3 else 0)
@@ -4663,6 +4716,7 @@ def _main_action_score(observation, option, turn_plan=None):
         and ariana_compression_available
     )
     factory_pending_after_supporter = supporter_played and not stadium_played and _factory_option_available(observation)
+    factory_before_ariana_score = _factory_before_ariana_score(observation)
 
     if option_type in (14, "end"):
         return -20_000
@@ -5069,6 +5123,8 @@ def _main_action_score(observation, option, turn_plan=None):
                 return -6_500
             if supporter_played:
                 return 72_000
+            if factory_before_ariana_score is not None:
+                return factory_before_ariana_score
             if ariana_desired or (not supporter_played and energy_dig_needed and ARIANA in hand_ids):
                 return -_policy_rule_number("preferArianaEnergyDig", "factoryBeforeArianaPenalty", 6_000)
             return 10_400 if supporter_played else 3_100
@@ -5199,18 +5255,16 @@ def _choose_donkrow_main_action(observation, options):
             if _card_id(_card_from_option(observation, option)) == FACTORY and _option_type(option) in (10, "ability"):
                 return option_index
 
+    factory_before_ariana_index = _factory_before_ariana_option_index(observation, options)
+    if factory_before_ariana_index is not None:
+        return factory_before_ariana_index
+
     has_athena_option = any(
         _card_id(_card_from_option(observation, option)) == ARIANA
         for option in options
     )
 
     if has_athena_option:
-        for option_index, option in enumerate(options):
-            identifier = _card_id(_card_from_option(observation, option))
-            option_type = _option_type(option)
-            if identifier == FACTORY and option_type in (7, 10, "play", "ability"):
-                return option_index
-
         for option_index, option in enumerate(options):
             identifier = _card_id(_card_from_option(observation, option))
             option_type = _option_type(option)
