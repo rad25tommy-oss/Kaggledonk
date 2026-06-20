@@ -5090,6 +5090,38 @@ def _choose_donkrow_main_action(observation, options):
     if _select_context(select) not in (0, "main"):
         return None
 
+    current, _, player = _current_player(observation)
+    supporter_played = _supporter_played_this_turn(current, player)
+
+    if supporter_played:
+        for option_index, option in enumerate(options):
+            if _card_id(_card_from_option(observation, option)) == FACTORY and _option_type(option) in (10, "ability"):
+                return option_index
+            
+    has_athena_option = any(
+        _card_id(_card_from_option(observation, option)) == ARIANA
+        for option in options
+    )
+
+    if has_athena_option:
+        for option_index, option in enumerate(options):
+            identifier = _card_id(_card_from_option(observation, option))
+            option_type = _option_type(option)
+            if identifier == FACTORY and option_type in (7, 10, "play", "ability"):
+                return option_index
+
+        for option_index, option in enumerate(options):
+            identifier = _card_id(_card_from_option(observation, option))
+            option_type = _option_type(option)
+            if option_type in (9, "evolve") and identifier in (HONCHKROW, PORYGON2):
+                return option_index
+
+        for option_index, option in enumerate(options):
+            if _option_type(option) in (8, "attach"):
+                target = _target_card_from_option(observation, option)
+                if _card_id(target) in (HONCHKROW, PORYGON2):
+                    return option_index
+
     turn_plan = _build_donkrow_turn_plan(observation)
     scored = []
     for option_index, option in enumerate(options):
