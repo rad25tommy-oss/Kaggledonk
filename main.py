@@ -4012,6 +4012,10 @@ def _rocket_supporter_history_count(player):
     return _count_cards(player, ("discard", "trash"), lambda card_id: card_id in ROCKET_SUPPORTERS)
 
 
+def _proton_not_in_discard_or_trash(player):
+    return _count_cards(player, ("discard",), lambda card_id: card_id == PROTON) <= 0
+
+
 def _proton_opening_allowed(current, player, setup_incomplete):
     return (
         bool(setup_incomplete)
@@ -4250,8 +4254,10 @@ def _choose_optional_cards(observation, options, max_count):
     setup_incomplete = bench_count < 2 or murkrow_lines < 2 or porygon_lines < 1
     proton_opening_allowed = _proton_opening_allowed(current, player, setup_incomplete)
     turn_one_proton_priority = _turn_one_proton_priority(current, player)
-    early_turn = turn_number <= _policy_rule_number("preferProtonWhenSetupIncomplete", "earlyTurnMax", 4)
     supporter_played = _supporter_played_this_turn(current, player)
+    first_proton_pending = _proton_not_in_discard_or_trash(player)
+    first_proton_search_pending = first_proton_pending and PROTON not in hand_ids and not supporter_played
+    early_turn = turn_number <= _policy_rule_number("preferProtonWhenSetupIncomplete", "earlyTurnMax", 4)
     stadium_ids = [_card_id(card) for card in _iter_cards(_read(current, "stadium", []))]
     search_option_ids = [_card_id(_card_from_option(observation, option)) for option in options]
     search_can_take_proton = PROTON in search_option_ids
@@ -4305,7 +4311,7 @@ def _choose_optional_cards(observation, options, max_count):
                     score = 1_700 if porygon_lines < 1 else 220
                 else:
                     score = -10_000
-            elif turn_one_proton_priority and identifier == PROTON and PROTON not in hand_ids and effect in (POKEGEAR, TEAM_ROCKET_TRANSCEIVER, ROTO_STICK):
+            elif first_proton_search_pending and identifier == PROTON and effect in (POKEGEAR, TEAM_ROCKET_TRANSCEIVER, ROTO_STICK):
                 score = 250_000
             elif effect == POKE_PAD:
                 field_murkrow_lines = field_top_ids.count(MURKROW) + field_top_ids.count(HONCHKROW)
@@ -4623,6 +4629,8 @@ def _main_action_score(observation, option, turn_plan=None):
     setup_incomplete = bench_count < 2 or murkrow_lines < 2 or porygon_lines < 1
     proton_opening_allowed = _proton_opening_allowed(current, player, setup_incomplete)
     turn_one_proton_priority = _turn_one_proton_priority(current, player)
+    first_proton_pending = _proton_not_in_discard_or_trash(player)
+    first_proton_search_pending = first_proton_pending and PROTON not in hand_ids and not supporter_played
     early_turn = _safe_int(_read(current, "turn"), 0) <= _policy_rule_number("preferProtonWhenSetupIncomplete", "earlyTurnMax", 4)
     opponent_active_hp = _remaining_hp(_opponent_active_card(observation))
     ariana_compression_available = _has_ariana_compression_option(observation)
@@ -4993,6 +5001,8 @@ def _main_action_score(observation, option, turn_plan=None):
         if identifier == PROTON:
             if supporter_played:
                 return -7_500
+            if first_proton_pending:
+                return 300_000
             if turn_one_proton_priority:
                 return 300_000
             if proton_opening_allowed:
@@ -5021,7 +5031,7 @@ def _main_action_score(observation, option, turn_plan=None):
                 score -= 2_400
             return score
         if identifier == TEAM_ROCKET_TRANSCEIVER:
-            if turn_one_proton_priority and PROTON not in hand_ids:
+            if first_proton_search_pending:
                 return 240_000
             if PROTON in hand_ids and not supporter_played and proton_opening_allowed:
                 return 3_200
@@ -5044,7 +5054,7 @@ def _main_action_score(observation, option, turn_plan=None):
                 pad_score += _policy_rule_number("pokePadEvolutionAttack", "activeEvolutionBonus", 2_800)
             return pad_score
         if identifier == POKEGEAR:
-            if turn_one_proton_priority and PROTON not in hand_ids:
+            if first_proton_search_pending:
                 return 235_000
             return 8_800 + (3_900 if rocket_feather_fuel_need else 0) + (2_200 if energy_murkrow_needs_honchkrow else 0) + (
                 _policy_rule_number("preferArianaEnergyDig", "pokegearArianaBonus", 5_200) if energy_dig_needed else 0
@@ -5058,7 +5068,7 @@ def _main_action_score(observation, option, turn_plan=None):
                 return -_policy_rule_number("preferArianaEnergyDig", "factoryBeforeArianaPenalty", 6_000)
             return 10_400 if supporter_played else 3_100
         if identifier == ROTO_STICK:
-            if turn_one_proton_priority and PROTON not in hand_ids:
+            if first_proton_search_pending:
                 return 230_000
             return 7_900 + (4_200 if rocket_feather_fuel_need else 0) + (3_200 if energy_murkrow_needs_honchkrow else 0) + (
                 _policy_rule_number("preferArianaEnergyDig", "pokegearArianaBonus", 5_200) if energy_dig_needed else 0
