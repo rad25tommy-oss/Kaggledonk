@@ -846,6 +846,8 @@ class DonkrowPolicy:
     def _score_supporter_plan(self, candidate: Candidate, context: PolicyContext) -> float:
         text = candidate.compact
         score = 0.0
+        has_ariana_option = any(is_ariana(action_text) for action_text in context.legal_action_texts)
+        has_miracle_headset_option = any(is_miracle_headset(action_text) for action_text in context.legal_action_texts)
 
         if not candidate.kind == "trainer":
             return score
@@ -888,6 +890,17 @@ class DonkrowPolicy:
                 score += 520.0
             if is_prize_race_ahead(context) and context.has_rocket_feather_action and not context.has_ko_attack:
                 score += policy_weight("weights.supporter.preserveAthenaPrizeRaceAhead")
+            if not context.supporter_right_used and has_miracle_headset_option:
+                score += 760.0
+                
+        if is_miracle_headset(text):
+            if context.has_ko_attack:
+                score += 420.0
+            else:
+                score -= 900.0
+            if not context.supporter_right_used and has_ariana_option:
+                score -= 520.0
+    
 
         if is_archer(text):
             # Archer is strong after losing a Pokemon, but weaker as a blind
