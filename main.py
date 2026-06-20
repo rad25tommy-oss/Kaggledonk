@@ -534,6 +534,7 @@ SELECT_CONTEXT_NAMES = {
     2: "setup bench pokemon",
     7: "to hand search",
     8: "rocket feather discard cost",
+    38: "mulligan bonus draw",
     41: "deck registration",
 }
 
@@ -892,7 +893,7 @@ class DonkrowPolicy:
                 score += policy_weight("weights.supporter.preserveAthenaPrizeRaceAhead")
             if not context.supporter_right_used and has_miracle_headset_option:
                 score += 760.0
-                
+
         if is_miracle_headset(text):
             if context.has_ko_attack:
                 score += 420.0
@@ -900,7 +901,7 @@ class DonkrowPolicy:
                 score -= 900.0
             if not context.supporter_right_used and has_ariana_option:
                 score -= 520.0
-    
+
 
         if is_archer(text):
             # Archer is strong after losing a Pokemon, but weaker as a blind
@@ -3460,7 +3461,7 @@ def _planned_energy_available(player, attacker, attack_id):
 def _donkarasu_can_ko_from_bench(observation):
     """ベンチのドンカラスがロケットフェザーで相手をKOできるか判定"""
     current, your_index, player = _current_player(observation)
-    
+
     # ベンチからドンカラス取得
     bench = _read(player, "bench", [])
     honchkrow_from_bench = None
@@ -3470,15 +3471,15 @@ def _donkarasu_can_ko_from_bench(observation):
             if _card_id(card) == HONCHKROW:
                 honchkrow_from_bench = card
                 break
-    
+
     if honchkrow_from_bench is None:
         return False
-    
+
     # ドンカラスがエネルギーを持っているか確認
     energy_cards = _attached_energy_cards(honchkrow_from_bench)
     if energy_cards <= 0:
         return False
-    
+
     # 相手のアクティブHP取得
     opponent_active = _opponent_active_card(observation)
     if opponent_active is None:
@@ -3486,16 +3487,16 @@ def _donkarasu_can_ko_from_bench(observation):
     target_hp = _remaining_hp(opponent_active)
     if target_hp <= 0:
         return False
-    
+
     # ロケットフェザーのダメージ/サポーター計算
     damage_per_supporter = _rocket_feather_damage_per_supporter(opponent_active)
-    
+
     # 相手をKOするために必要なサポーター枚数（切り上げ）
     required_supporters = (target_hp + damage_per_supporter - 1) // damage_per_supporter
-    
+
     # 手札のロケットサポーター枚数
     hand_supporters = _count_cards(player, ("hand",), lambda card_id: card_id in ROCKET_SUPPORTERS)
-    
+
     # 必要なサポーター枚数以上あるか
     return hand_supporters >= required_supporters
 
@@ -4040,6 +4041,25 @@ def _is_initial_deck_request(observation, select):
     return select is None
 
 
+def _choose_mulligan_bonus_draw(observation, options, max_count):
+    select = _read(observation, "select", {})
+    if _select_context(select) != 38 or max_count != 1:
+        return None
+
+    numbered_options = []
+    for option_index, option in enumerate(options):
+        number = _read(option, "number")
+        if number is None:
+            continue
+        numbered_options.append((_safe_int(number, -1), option_index))
+
+    if not numbered_options:
+        return None
+
+    numbered_options.sort(key=lambda item: (-item[0], item[1]))
+    return [numbered_options[0][1]]
+
+
 def _choose_rocket_feather_costs(observation, options, max_count):
     select = _read(observation, "select", {})
     effect = _read(select, "effect")
@@ -4528,6 +4548,9 @@ def _choose_optional_cards(observation, options, max_count):
 def _choose_optional_multi_select(observation, options, max_count):
     if max_count <= 0:
         return []
+    mulligan_bonus_draw = _choose_mulligan_bonus_draw(observation, options, max_count)
+    if mulligan_bonus_draw is not None:
+        return mulligan_bonus_draw
     taunt_lock = _choose_taunt_move_lock_option(observation, options, max_count)
     if taunt_lock is not None:
         return taunt_lock
@@ -5160,7 +5183,7 @@ def _choose_donkrow_main_action(observation, options):
         for option_index, option in enumerate(options):
             if _card_id(_card_from_option(observation, option)) == FACTORY and _option_type(option) in (10, "ability"):
                 return option_index
-            
+
     has_athena_option = any(
         _card_id(_card_from_option(observation, option)) == ARIANA
         for option in options
