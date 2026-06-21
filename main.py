@@ -2981,6 +2981,71 @@ def _rocket_feather_damage_per_supporter(opponent_active):
     return 120 if defender_id in DARK_WEAK_TO_IDS or dark_weak_by_name else 60
 
 
+def _murkrow_taunt_damage(opponent_active):
+    defender_id = _card_id(opponent_active)
+    defender_name = str(_read(opponent_active, "name", "")).lower()
+    dark_weak_by_name = any(hint in defender_name for hint in DARK_WEAK_NAME_HINTS)
+    return 60 if defender_id in DARK_WEAK_TO_IDS or dark_weak_by_name else 30
+
+
+def _active_murkrow_can_evolve_to_honchkrow(observation):
+    current, _, player = _current_player(observation)
+    active = _top_card(_read(player, "active", []))
+    if _card_id(active) != MURKROW:
+        return False
+    select = _read(observation, "select", {})
+    for option in _select_options(select):
+        if _option_type(option) not in (9, "evolve"):
+            continue
+        if _card_id(_card_from_option(observation, option)) != HONCHKROW:
+            continue
+        target = _target_card_from_option(observation, option)
+        target_is_active = _area_code(_read(option, "inPlayArea"), -1) == 4
+        if target_is_active and (_card_id(target) in (None, MURKROW)):
+            return True
+        if target is None and target_is_active:
+            return True
+    return False
+
+
+def _deck_basic_setup_count(player):
+    return _count_cards(player, ("deck",), lambda card_id: card_id in BASIC_SETUP_POKEMON)
+
+
+def _tempt_supporter_target_score(player, identifier):
+    if identifier not in ROCKET_SUPPORTERS:
+        return -100_000
+
+    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
+    if ARIANA not in hand_ids:
+        if identifier == ARIANA:
+            return 95_000
+        return -20_000
+
+    if _deck_basic_setup_count(player) >= 3 and PROTON not in hand_ids:
+        if identifier == PROTON:
+            return 88_000
+        return -12_000
+
+    missing_priority = (
+        (ARCHER, 78_000),
+        (PETREL, 68_000),
+        (GIOVANNI, 58_000),
+    )
+    for supporter_id, score in missing_priority:
+        if supporter_id not in hand_ids:
+            return score if identifier == supporter_id else -8_000
+
+    fallback_scores = {
+        ARCHER: 19_000,
+        PETREL: 16_000,
+        GIOVANNI: 13_000,
+        ARIANA: 8_000,
+        PROTON: 2_000,
+    }
+    return fallback_scores.get(identifier, -8_000)
+
+
 def _night_stretcher_target_score(observation, card):
     identifier = _card_id(card)
     if identifier is None:
@@ -4710,25 +4775,8 @@ def _choose_optional_cards(observation, options, max_count):
             elif effect == MURKROW:
                 if identifier not in ROCKET_SUPPORTERS:
                     score = -100_000
-                elif identifier == PROTON:
-                    if PROTON in hand_ids:
-                        score = -_policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
-                    elif proton_opening_allowed:
-                        score = 30_000
-                    else:
-                        score = -_policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
-                    if energy_murkrow_needs_honchkrow:
-                        score -= 3_400
-                elif identifier == ARIANA:
-                    score = 36_000 + (6_000 if energy_dig_needed or athena_draw_count >= 3 or hand_count <= 5 else 0)
-                    if energy_dig_needed:
-                        score += _policy_rule_number("preferArianaEnergyDig", "transceiverArianaBonus", 8_800)
-                elif identifier == PETREL:
-                    score = 18_000 + (2_200 if energy_murkrow_needs_honchkrow else 0)
-                elif identifier == ARCHER:
-                    score = _apollo_search_score(observation)
-                elif identifier == GIOVANNI:
-                    score = max(9_200, giovanni_fuel_search_score())
+                else:
+                    score = _tempt_supporter_target_score(player, identifier)
             elif effect == ROTO_STICK:
                 if identifier in SUPPORTER_CARD_IDS:
                     score += 40_000
@@ -4829,7 +4877,9 @@ def _main_action_score(observation, option, turn_plan=None):
     has_switch_option = _has_switch_option(observation)
     has_any_attack_option = _has_any_main_attack_option(observation)
     active_honchkrow = any(card_id == HONCHKROW for card_id in active_ids)
+    active_murkrow = any(card_id == MURKROW for card_id in active_ids)
     active_porygon2 = any(card_id == PORYGON2 for card_id in active_ids)
+    active_murkrow_can_evolve = _active_murkrow_can_evolve_to_honchkrow(observation)
     active_has_ignition_energy = IGNITION_ENERGY in _attached_energy_card_ids(active_card)
     active_attack_ready = (
         (active_honchkrow and has_rocket_feather_action and hand_supporters > 0) or
@@ -5035,6 +5085,16 @@ def _main_action_score(observation, option, turn_plan=None):
                 score = max(score, attack_floor)
             return max(score, planned_score)
         if attack_id == TAUNT_ATTACK:
+            if active_murkrow and active_murkrow_can_evolve:
+                return -90_000
+            if active_murkrow:
+                taunt_damage = _murkrow_taunt_damage(_opponent_active_card(observation))
+                if opponent_active_hp > 0 and taunt_damage >= opponent_active_hp:
+                    return 86_000 + min(taunt_damage, 120) * 30
+                threat = _opponent_active_attack_threat(observation)
+                if threat <= 0:
+                    return 1_200
+                return min(6_000, 1_800 + threat * 10)
             threat = _opponent_active_attack_threat(observation)
             if threat <= 0:
                 return _policy_rule_number("auxiliaryTauntPlan", "notReadyPenalty", -12_000)
@@ -5046,19 +5106,22 @@ def _main_action_score(observation, option, turn_plan=None):
                 score -= _policy_rule_number("auxiliaryTauntPlan", "setupPenalty", 1_400)
             return score
         if attack_id in MURKROW_ATTACKS:
+            if active_murkrow and active_murkrow_can_evolve:
+                return -90_000
             if attack_id == MURKROW_TEMPT_ATTACK:
-                if hand_supporters > 0:
-                    return -220_000
-                if any(card_id in (TEAM_ROCKET_TRANSCEIVER, POKEGEAR, POKE_PAD, ROTO_STICK, MIRACLE_HEADSET) for card_id in hand_ids):
-                    return -72_000
-                score = 3_800
+                score = 11_500 if active_murkrow else 3_800
                 if setup_incomplete:
-                    score += 900
-                if energy_dig_needed:
                     score += 1_100
+                if energy_dig_needed:
+                    score += 1_400
                 if deck_count <= 4:
-                    score -= 1_400
+                    score -= 1_000
                 return score
+            if active_murkrow:
+                taunt_damage = _murkrow_taunt_damage(_opponent_active_card(observation))
+                if opponent_active_hp > 0 and taunt_damage >= opponent_active_hp:
+                    return 82_000 + min(taunt_damage, 120) * 28
+                return 1_600
             return -120_000
         return 2_200
 
