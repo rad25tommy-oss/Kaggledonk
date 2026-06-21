@@ -4113,6 +4113,54 @@ def _turn_number(current):
     return _safe_int(_read(current, "turn", _read(current, "turnNumber", _read(current, "turn_number", 0))), 0)
 
 
+def _first_player_index(current):
+    return _safe_int(_read(current, "firstPlayer", _read(current, "first_player", -1)), -1)
+
+
+def _opening_turn_order(current, player_index):
+    turn = _turn_number(current)
+    first_player = _first_player_index(current)
+    if turn <= 0 or first_player < 0:
+        return None
+    if first_player == player_index:
+        return "first" if turn <= 1 else None
+    return "second" if turn <= 2 else None
+
+
+def _bench_has_murkrow(player):
+    for bench_card in _read(player, "bench", []) or []:
+        if _card_id(_top_card(bench_card)) == MURKROW:
+            return True
+    return False
+
+
+def _opening_turn_team_rocket_energy_score(current, player, player_index, hand_ids, target_id, target_is_active, target_is_bench, target_energy_cards, target_has_rocket_energy):
+    order = _opening_turn_order(current, player_index)
+    if order is None:
+        return None
+
+    rocket_energy_in_hand = sum(1 for card_id in hand_ids if card_id == TEAM_ROCKET_ENERGY)
+    if rocket_energy_in_hand <= 0:
+        return None
+
+    active_id = _card_id(_top_card(_read(player, "active", [])))
+    has_bench_murkrow = _bench_has_murkrow(player)
+    target_is_clean_murkrow = target_id == MURKROW and target_energy_cards <= 0 and not target_has_rocket_energy
+    must_attach = 135_000
+    forbidden = -180_000
+
+    if order == "first":
+        if active_id == MURKROW:
+            return must_attach if target_is_active and target_is_clean_murkrow else forbidden
+        if has_bench_murkrow:
+            return must_attach if target_is_bench and target_is_clean_murkrow else forbidden
+        return forbidden
+
+    if rocket_energy_in_hand >= 2:
+        return must_attach if target_is_bench and target_is_clean_murkrow else forbidden
+    return forbidden
+
+
 def _turn_one_proton_priority(current, player):
     return _turn_number(current) <= 1 and not _supporter_played_this_turn(current, player)
 
@@ -4954,6 +5002,20 @@ def _main_action_score(observation, option, turn_plan=None):
         return 4_000
 
     if option_type in (8, "attach"):
+        if identifier == TEAM_ROCKET_ENERGY:
+            opening_attach_score = _opening_turn_team_rocket_energy_score(
+                current,
+                player,
+                your_index,
+                hand_ids,
+                target_id,
+                target_is_active,
+                target_is_bench,
+                target_energy_cards,
+                target_has_rocket_energy,
+            )
+            if opening_attach_score is not None:
+                return opening_attach_score
         if (
             turn_plan is not None
             and not turn_plan.seed_guard_blocked
