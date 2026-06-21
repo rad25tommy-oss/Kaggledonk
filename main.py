@@ -3744,6 +3744,9 @@ def _should_avoid_apollo_reset(observation, apollo_from_hand=True):
     if needs_fuel and has_headset_alternative and discard_supporters >= 2:
         return True
     if has_athena_alternative and (needs_energy or needs_fuel):
+        energy_preference = _supporter_energy_dig_preference(current, player, apollo_from_hand=apollo_from_hand)
+        if needs_energy and energy_preference is not None and energy_preference[0] == "apollo":
+            return False
         return True
     return False
 
@@ -3888,6 +3891,93 @@ def _needs_ariana_energy_dig(player):
     field_ids = _field_card_ids(player)
     has_attack_line = any(card_id in (HONCHKROW, PORYGON2, MURKROW, PORYGON) for card_id in field_ids)
     return active_needs_energy or has_attack_line
+
+
+def _energy_attached_this_turn(current, player):
+    return bool(
+        _read(player, "energyAttached", False)
+        or _read(player, "energyAttachedThisTurn", False)
+        or _read(player, "energy_attached", False)
+        or _read(current, "energyAttached", False)
+        or _read(current, "energyAttachedThisTurn", False)
+        or _read(current, "energy_attached", False)
+    )
+
+
+def _energy_hit_probability(population_count, energy_count, draw_count):
+    population_count = max(0, _safe_int(population_count, 0))
+    energy_count = max(0, min(population_count, _safe_int(energy_count, 0)))
+    draw_count = max(0, min(population_count, _safe_int(draw_count, 0)))
+    if population_count <= 0 or energy_count <= 0 or draw_count <= 0:
+        return 0.0
+
+    miss_probability = 1.0
+    non_energy_count = population_count - energy_count
+    for draw_index in range(draw_count):
+        remaining = population_count - draw_index
+        remaining_non_energy = non_energy_count - draw_index
+        if remaining_non_energy <= 0:
+            return 1.0
+        miss_probability *= remaining_non_energy / remaining
+    return 1.0 - miss_probability
+
+
+def _supporter_energy_dig_odds(player, apollo_from_hand=True):
+    hand_energy = _count_cards(player, ("hand",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    deck_energy = _count_cards(player, ("deck",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    deck_count = _deck_count(player)
+    if hand_energy > 0 or deck_energy <= 0 or deck_count <= 0:
+        return None
+
+    hand_count = _hand_count(player)
+    ariana_draw_count = _ariana_draw_count_for_player(player)
+    ariana_probability = _energy_hit_probability(deck_count, deck_energy, ariana_draw_count)
+
+    apollo_shuffle_count = max(0, hand_count - (1 if apollo_from_hand else 0))
+    apollo_population = deck_count + apollo_shuffle_count
+    apollo_draw_count = min(5, apollo_population)
+    apollo_probability = _energy_hit_probability(apollo_population, deck_energy, apollo_draw_count)
+
+    return {
+        "ariana_probability": ariana_probability,
+        "apollo_probability": apollo_probability,
+        "ariana_draw_count": ariana_draw_count,
+        "apollo_draw_count": apollo_draw_count,
+    }
+
+
+def _supporter_energy_dig_preference(current, player, apollo_from_hand=True):
+    if _supporter_played_this_turn(current, player) or _energy_attached_this_turn(current, player):
+        return None
+    if not _needs_ariana_energy_dig(player):
+        return None
+
+    odds = _supporter_energy_dig_odds(player, apollo_from_hand=apollo_from_hand)
+    if odds is None:
+        return None
+
+    margin = 0.001
+    if odds["apollo_probability"] > odds["ariana_probability"] + margin:
+        return "apollo", odds
+    return "ariana", odds
+
+
+def _supporter_energy_dig_score_adjustment(current, player, identifier, apollo_from_hand=True):
+    if identifier not in (ARIANA, ARCHER):
+        return 0
+
+    preference = _supporter_energy_dig_preference(current, player, apollo_from_hand=apollo_from_hand)
+    if preference is None:
+        return 0
+
+    preferred, odds = preference
+    probability_gap = abs(odds["apollo_probability"] - odds["ariana_probability"])
+    draw_gap = max(0, odds["apollo_draw_count"] - odds["ariana_draw_count"])
+    swing = min(34_000, 10_000 + int(probability_gap * 42_000) + draw_gap * 1_200)
+
+    if preferred == "apollo":
+        return swing if identifier == ARCHER else -swing
+    return min(10_000, swing) if identifier == ARIANA else -min(12_000, swing)
 
 
 def _donkrow_development_settled(player):
@@ -4669,6 +4759,11 @@ def _choose_optional_cards(observation, options, max_count):
                     score = _apollo_search_score(observation)
             elif effect == NIGHT_STRETCHER:
                 score = _night_stretcher_target_score(observation, option_card)
+            if effect in (POKEGEAR, TEAM_ROCKET_TRANSCEIVER, PETREL, MURKROW, ROTO_STICK, MIRACLE_HEADSET) and identifier in (ARIANA, ARCHER):
+                energy_dig_adjustment = _supporter_energy_dig_score_adjustment(current, player, identifier, apollo_from_hand=False)
+                if energy_dig_adjustment > 0 and identifier in hand_ids:
+                    energy_dig_adjustment = 0
+                score += energy_dig_adjustment
             if score > 0 and (best is None or score > best[0] or (score == best[0] and option_index < best[1])):
                 best = (score, option_index, option, identifier)
 
@@ -5283,6 +5378,7 @@ def _main_action_score(observation, option, turn_plan=None):
                     score -= _policy_rule_number("compressBeforeAriana", "lowDrawPenalty", 12_000)
                 if ariana_compression_available and hand_count >= _policy_rule_number("compressBeforeAriana", "compressionHandMin", 6):
                     score -= _policy_rule_number("compressBeforeAriana", "compressionPenalty", 8_500)
+            score += _supporter_energy_dig_score_adjustment(current, player, ARIANA, apollo_from_hand=True)
             if proton_opening_allowed and early_turn and (PROTON in hand_ids or TEAM_ROCKET_TRANSCEIVER in hand_ids or POKE_PAD in hand_ids):
                 score -= 5_400
             return score
@@ -5297,11 +5393,12 @@ def _main_action_score(observation, option, turn_plan=None):
             if supporter_played:
                 return -7_500
             apollo_score = _apollo_reset_score(observation, assume_legal=True, apollo_from_hand=True)
+            energy_dig_adjustment = _supporter_energy_dig_score_adjustment(current, player, ARCHER, apollo_from_hand=True)
             if apollo_score > 0:
-                if energy_dig_needed and ARIANA in hand_ids:
+                if energy_dig_needed and ARIANA in hand_ids and energy_dig_adjustment <= 0:
                     apollo_score -= 6_000
-                return apollo_score
-            return apollo_score
+                return apollo_score + energy_dig_adjustment
+            return apollo_score + energy_dig_adjustment if energy_dig_adjustment > 0 else apollo_score
         return 500
 
     if option_type in (10, "ability"):
