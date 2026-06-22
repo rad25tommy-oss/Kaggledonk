@@ -264,9 +264,9 @@ POLICY_CONFIG_JSON = r'''{
       "enabled": true,
       "highHandMin": 7,
       "lowDrawMax": 2,
-      "lowDrawPenalty": 12000,
+      "lowDrawPenalty": 11310,
       "compressionHandMin": 6,
-      "compressionPenalty": 8500,
+      "compressionPenalty": 8453,
       "maxLowValueScore": 1800
     },
     "preferProtonWhenSetupIncomplete": {
@@ -381,7 +381,7 @@ POLICY_CONFIG_JSON = r'''{
     },
     "preferArianaEnergyDig": {
       "enabled": true,
-      "noHandEnergyBonus": 11786,
+      "noHandEnergyBonus": 10925,
       "attackStarvedBonus": 10500,
       "transceiverArianaBonus": 5848,
       "pokegearArianaBonus": 5200,
@@ -394,16 +394,16 @@ POLICY_CONFIG_JSON = r'''{
       "enabled": true,
       "honchkrowWithEnergyInHandScore": 12000,
       "porygon2WithIgnitionInHandScore": 11800,
-      "evolutionBackupScore": 5600,
+      "evolutionBackupScore": 5961,
       "activeEvolutionBonus": 2800
     },
     "attackContinuity": {
       "enabled": true,
       "activeHonchkrowEvolutionScore": 42000,
       "benchHonchkrowEvolutionScore": 28000,
-      "nextAttackerRocketEnergyBonus": 21000,
+      "nextAttackerRocketEnergyBonus": 20316,
       "activeReadyBasicBenchScore": 32000,
-      "activeReadyPokePadScore": 30000
+      "activeReadyPokePadScore": 31329
     },
     "auxiliaryTauntPlan": {
       "enabled": true,
@@ -421,11 +421,11 @@ POLICY_CONFIG_JSON = r'''{
       "ariana": 220,
       "archer": 30,
       "giovanni": 100,
-      "factory": 140,
+      "factory": 148,
       "rotoStick": 70,
       "pokegear": 65,
-      "pokePad": 75,
-      "nightStretcher": 55,
+      "pokePad": 90,
+      "nightStretcher": 76,
       "miracleHeadset": 68
     },
     "board": {
@@ -435,7 +435,7 @@ POLICY_CONFIG_JSON = r'''{
       "benchPorygonWhenNoAttack": 80,
       "benchRocketPokemon": 70,
       "evolveHonchkrow": 300,
-      "evolveHonchkrowWithEnergy": 100,
+      "evolveHonchkrowWithEnergy": 71,
       "evolvePorygonAttacker": 180,
       "evolvePorygonZ": 140
     },
@@ -453,17 +453,17 @@ POLICY_CONFIG_JSON = r'''{
       "preserveAthenaPrizeRaceAhead": 380
     },
     "energy": {
-      "openEnergyRight": 74,
+      "openEnergyRight": 85,
       "usedEnergyPenalty": -450,
-      "prepareWhenNoAttack": 323,
+      "prepareWhenNoAttack": 331,
       "prepareBenchWhenNoAttack": 206,
-      "immediateAttack": 360,
+      "immediateAttack": 323,
       "immediateKo": 275,
       "futurePlan": 160,
       "proactivePlan": 70,
       "honchkrowTarget": 240,
       "porygonAttackerTarget": 210,
-      "murkrowTarget": 78,
+      "murkrowTarget": 48,
       "murkrowNonImmediatePenalty": -142,
       "porygonBasicTarget": 55,
       "teamRocketEnergyOnPorygonPenalty": -260,
@@ -3288,26 +3288,20 @@ def _poke_pad_target_score(observation, card):
         return -100_000
 
     _, _, player = _current_player(observation)
-    current = _read(observation, "current", {})
     field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
     hand_ids = [_card_id(hand_card) for hand_card in _iter_cards(_read(player, "hand", []))]
-    deck_ids = _deck_card_ids_for_policy(player)
     discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     bench_count = _bench_top_count(player)
     field_count = len(field_top_ids)
     free_bench = bench_count < _bench_limit(player)
-    turn_number = _safe_int(_read(current, "turn"), 0)
     seed_out_risk = field_count <= 1 and free_bench
     thin_board_basic_risk = field_count <= 2 and free_bench
     has_murkrow_source = MURKROW in field_top_ids or MURKROW in hand_ids
     has_porygon_source = PORYGON in field_top_ids or PORYGON in hand_ids
     has_honchkrow_ready = HONCHKROW in field_top_ids or HONCHKROW in hand_ids
     has_porygon2_ready = PORYGON2 in field_top_ids or PORYGON2 in hand_ids
-    honchkrow_pad_bridge = _honchkrow_pad_bridge_available(player, hand_ids, deck_ids)
 
     if _is_basic_setup_pokemon(identifier):
-        if identifier == MURKROW and honchkrow_pad_bridge and turn_number <= 1:
-            return 86_000
         if seed_out_risk:
             return 300_000 + (24_000 if identifier == MURKROW else 12_000)
         if thin_board_basic_risk:
@@ -3315,19 +3309,15 @@ def _poke_pad_target_score(observation, card):
         score = 118_000 if identifier == MURKROW else 92_000
         if free_bench:
             score += 34_000
-        if identifier == MURKROW and not has_honchkrow_ready and not honchkrow_pad_bridge:
+        if identifier == MURKROW and not has_honchkrow_ready:
             score += 16_000
         if identifier == PORYGON and not has_porygon2_ready:
             score += 10_000
         return score
 
     if seed_out_risk or thin_board_basic_risk:
-        if identifier == HONCHKROW and honchkrow_pad_bridge and turn_number <= 1:
-            return 275_000
         return -85_000
     if identifier == HONCHKROW:
-        if honchkrow_pad_bridge and turn_number <= 1:
-            return 275_000
         return 180_000 if has_murkrow_source else 22_000
     if identifier == PORYGON2:
         if not _porygon_development_allowed(player):
@@ -4722,14 +4712,6 @@ def _honchkrow_chain_available(player, hand_ids=None, deck_ids=None):
     return False
 
 
-def _honchkrow_pad_bridge_available(player, hand_ids=None, deck_ids=None):
-    if hand_ids is None:
-        hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
-    if deck_ids is None:
-        deck_ids = _deck_card_ids_for_policy(player)
-    return TEAM_ROCKET_TRANSCEIVER in hand_ids and PROTON in deck_ids and MURKROW in deck_ids
-
-
 def _bench_honchkrow_promotion_available(player, hand_ids=None, deck_ids=None):
     if hand_ids is None:
         hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
@@ -4789,15 +4771,6 @@ def _poke_pad_evolution_attack_need(player, hand_ids):
     )
     active_bonus = (active_id == MURKROW and needs_honchkrow) or (active_id == PORYGON and needs_porygon2)
     return needs_honchkrow, needs_porygon2, active_bonus
-
-
-def _poke_pad_active_evolution_needed(player, hand_ids, deck_ids):
-    active_id = _card_id(_top_card(_read(player, "active", [])))
-    if active_id == MURKROW:
-        return HONCHKROW not in hand_ids and HONCHKROW in deck_ids
-    if active_id == PORYGON and _porygon_development_allowed(player):
-        return PORYGON2 not in hand_ids and PORYGON2 in deck_ids
-    return False
 
 
 def _supporter_played_this_turn(current, player):
@@ -5358,7 +5331,7 @@ def _choose_optional_cards(observation, options, max_count):
                 elif identifier == GIOVANNI:
                     score = max(14_000, giovanni_fuel_search_score())
                 elif identifier == PROTON:
-                    score = 2_000 if proton_opening_allowed else 1_000
+                    score = 2_000 if proton_opening_allowed else _policy_rule_number("preferProtonWhenSetupIncomplete", "settledRecoveryScore", -50_000)
             elif effect == TEAM_ROCKET_TRANSCEIVER:
                 has_proton_in_hand = PROTON in hand_ids
                 has_ariana_in_hand = ARIANA in hand_ids
@@ -5495,7 +5468,7 @@ def _choose_optional_cards(observation, options, max_count):
                     if proton_opening_allowed:
                         score += 1_100
                     else:
-                        score += 900
+                        score -= _policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
                 elif identifier == PETREL:
                     score += 18_000 if petrel_energy_bridge else 800
                 elif identifier == GIOVANNI:
@@ -6337,14 +6310,6 @@ def _pre_support_board_development_option_index(observation, options, turn_plan=
     current, _, player = _current_player(observation)
     if _supporter_played_this_turn(current, player):
         return None
-
-    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
-    deck_ids = _deck_card_ids_for_policy(player)
-    if _poke_pad_active_evolution_needed(player, hand_ids, deck_ids):
-        for option_index, option in enumerate(options):
-            if _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) == POKE_PAD:
-                return option_index
-
     draw_reset_supporter_pending = any(
         _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) in DRAW_RESET_SUPPORTERS
         for option in options
