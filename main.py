@@ -2511,6 +2511,7 @@ MURKROW_SECONDARY_ATTACK = 653
 MURKROW_ATTACKS = {MURKROW_TEMPT_ATTACK, MURKROW_SECONDARY_ATTACK}
 HOP_PHANTUMP = 878
 HOP_PHANTUMP_DODGE_ATTACK = 1266
+HOP_PHANTUMP_DODGE_ATTACK_IDS = {HOP_PHANTUMP_DODGE_ATTACK}
 ROCKET_SUPPORTER_COST_PRIORITY = {
     1220: 100,  # Team Rocket's Proton / Lance: lowest future value after setup
     1218: 90,  # Team Rocket's Giovanni / Sakaki
@@ -3707,6 +3708,38 @@ def _lost_rocket_mon_last_turn(observation, current, player):
     return _logs_indicate_lost_rocket_mon_last_turn(observation, your_index)
 
 
+def _active_card_for_player(current, player_index):
+    player = _player_state(current, player_index)
+    return _top_card(_read(player, "active", []))
+
+
+def _is_hop_phantump_dodge_attack_log(entry, current):
+    player_index = _safe_int(_read(entry, "playerIndex"), -1)
+    if player_index < 0:
+        return False
+
+    log_type = _safe_int(_read(entry, "type"), None)
+    attack_id = _safe_int(_read(entry, "attackId", _read(entry, "attack_id")), None)
+    identifier = _card_id({"id": _read(entry, "cardId", _read(entry, "card_id"))})
+    active = _active_card_for_player(current, player_index)
+    active_id = _card_id(active)
+
+    if identifier == HOP_PHANTUMP:
+        return log_type == 15 or attack_id is not None
+    if attack_id in HOP_PHANTUMP_DODGE_ATTACK_IDS and identifier in (None, HOP_PHANTUMP):
+        return True
+    if log_type == 15 and identifier is None and active_id == HOP_PHANTUMP:
+        return True
+    return False
+
+
+def _hop_phantump_active_serial(current, player_index):
+    active = _active_card_for_player(current, player_index)
+    if _card_id(active) != HOP_PHANTUMP:
+        return None
+    return _safe_int(_read(active, "serial"), None)
+
+
 def _remember_hop_phantump_dodge(observation):
     current = _read(observation, "current", {})
     your_index = _safe_int(_read(current, "yourIndex"), -1)
@@ -3715,40 +3748,46 @@ def _remember_hop_phantump_dodge(observation):
     if your_index < 0 or turn < 0 or not isinstance(logs, list):
         return
 
-    pending = None
+    pending_by_player = {}
     for entry in logs:
         if not isinstance(entry, dict):
             continue
         player_index = _safe_int(_read(entry, "playerIndex"), -1)
-        attack_id = _safe_int(_read(entry, "attackId", _read(entry, "attack_id")), None)
-        identifier = _card_id({"id": _read(entry, "cardId", _read(entry, "card_id"))})
-        if identifier == HOP_PHANTUMP and attack_id == HOP_PHANTUMP_DODGE_ATTACK:
-            pending = {
-                "player_index": player_index,
-                "serial": _safe_int(_read(entry, "serial"), None),
+        if player_index < 0:
+            continue
+        if _is_hop_phantump_dodge_attack_log(entry, current):
+            pending_by_player[player_index] = {
+                "serial": _safe_int(_read(entry, "serial"), _hop_phantump_active_serial(current, player_index)),
             }
             continue
 
-        if pending is None or "head" not in entry:
-            continue
-        if player_index != pending["player_index"]:
+        if "head" not in entry:
             continue
 
+        pending = pending_by_player.get(player_index)
+        if pending is None and _hop_phantump_active_serial(current, player_index) is not None:
+            pending = {"serial": _hop_phantump_active_serial(current, player_index)}
+        if pending is None:
+            continue
+
+        against_player = 1 - player_index if player_index in (0, 1) else your_index
+        expires_turn = turn if your_index == against_player else turn + 1
+
         if bool(_read(entry, "head")):
-            HOP_DODGE_MEMORY[pending["player_index"]] = {
-                "against_player": your_index,
+            HOP_DODGE_MEMORY[player_index] = {
+                "against_player": against_player,
                 "turn": turn,
+                "expires_turn": expires_turn,
                 "serial": pending["serial"],
             }
         else:
-            existing = HOP_DODGE_MEMORY.get(pending["player_index"])
+            existing = HOP_DODGE_MEMORY.get(player_index)
             if (
                 isinstance(existing, dict)
-                and existing.get("against_player") == your_index
-                and existing.get("turn") == turn
+                and existing.get("against_player") == against_player
             ):
-                HOP_DODGE_MEMORY.pop(pending["player_index"], None)
-        pending = None
+                HOP_DODGE_MEMORY.pop(player_index, None)
+        pending_by_player.pop(player_index, None)
 
 
 def _opponent_active_has_hop_dodge_protection(observation):
@@ -3767,7 +3806,13 @@ def _opponent_active_has_hop_dodge_protection(observation):
     memory = HOP_DODGE_MEMORY.get(opponent_index)
     if not isinstance(memory, dict):
         return False
-    if memory.get("against_player") != your_index or memory.get("turn") != turn:
+    if memory.get("against_player") != your_index:
+        return False
+    expires_turn = _safe_int(memory.get("expires_turn"), _safe_int(memory.get("turn"), turn))
+    if turn > expires_turn:
+        HOP_DODGE_MEMORY.pop(opponent_index, None)
+        return False
+    if turn < _safe_int(memory.get("turn"), turn) - 1:
         return False
 
     memory_serial = memory.get("serial")
@@ -4728,15 +4773,6 @@ def _poke_pad_evolution_attack_need(player, hand_ids):
     return needs_honchkrow, needs_porygon2, active_bonus
 
 
-def _poke_pad_active_evolution_needed(player, hand_ids, deck_ids):
-    active_id = _card_id(_top_card(_read(player, "active", [])))
-    if active_id == MURKROW:
-        return HONCHKROW not in hand_ids and HONCHKROW in deck_ids
-    if active_id == PORYGON and _porygon_development_allowed(player):
-        return PORYGON2 not in hand_ids and PORYGON2 in deck_ids
-    return False
-
-
 def _supporter_played_this_turn(current, player):
     return bool(
         _read(player, "supporterPlayed", False)
@@ -5295,7 +5331,7 @@ def _choose_optional_cards(observation, options, max_count):
                 elif identifier == GIOVANNI:
                     score = max(14_000, giovanni_fuel_search_score())
                 elif identifier == PROTON:
-                    score = 2_000 if proton_opening_allowed else 1_000
+                    score = 2_000 if proton_opening_allowed else _policy_rule_number("preferProtonWhenSetupIncomplete", "settledRecoveryScore", -50_000)
             elif effect == TEAM_ROCKET_TRANSCEIVER:
                 has_proton_in_hand = PROTON in hand_ids
                 has_ariana_in_hand = ARIANA in hand_ids
@@ -5432,7 +5468,7 @@ def _choose_optional_cards(observation, options, max_count):
                     if proton_opening_allowed:
                         score += 1_100
                     else:
-                        score += 900
+                        score -= _policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
                 elif identifier == PETREL:
                     score += 18_000 if petrel_energy_bridge else 800
                 elif identifier == GIOVANNI:
@@ -5624,6 +5660,9 @@ def _main_action_score(observation, option, turn_plan=None):
                 return -42_000
             if attack_id == TAUNT_ATTACK:
                 return -28_000
+            if attack_id == MURKROW_TEMPT_ATTACK:
+                return 1_200
+            return -36_000
         if thin_board_guard and basic_continuity_option and not (turn_plan is not None and turn_plan.game_end):
             if attack_id in MURKROW_ATTACKS:
                 return -82_000
@@ -6271,14 +6310,6 @@ def _pre_support_board_development_option_index(observation, options, turn_plan=
     current, _, player = _current_player(observation)
     if _supporter_played_this_turn(current, player):
         return None
-
-    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
-    deck_ids = _deck_card_ids_for_policy(player)
-    if _poke_pad_active_evolution_needed(player, hand_ids, deck_ids):
-        for option_index, option in enumerate(options):
-            if _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) == POKE_PAD:
-                return option_index
-
     draw_reset_supporter_pending = any(
         _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) in DRAW_RESET_SUPPORTERS
         for option in options
