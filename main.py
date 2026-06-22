@@ -5295,7 +5295,7 @@ def _choose_optional_cards(observation, options, max_count):
                 elif identifier == GIOVANNI:
                     score = max(14_000, giovanni_fuel_search_score())
                 elif identifier == PROTON:
-                    score = 2_000 if proton_opening_allowed else _policy_rule_number("preferProtonWhenSetupIncomplete", "settledRecoveryScore", -50_000)
+                    score = 2_000 if proton_opening_allowed else 1_000
             elif effect == TEAM_ROCKET_TRANSCEIVER:
                 has_proton_in_hand = PROTON in hand_ids
                 has_ariana_in_hand = ARIANA in hand_ids
@@ -5432,7 +5432,7 @@ def _choose_optional_cards(observation, options, max_count):
                     if proton_opening_allowed:
                         score += 1_100
                     else:
-                        score -= _policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
+                        score += 900
                 elif identifier == PETREL:
                     score += 18_000 if petrel_energy_bridge else 800
                 elif identifier == GIOVANNI:
