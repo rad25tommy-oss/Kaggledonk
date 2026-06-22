@@ -3288,20 +3288,26 @@ def _poke_pad_target_score(observation, card):
         return -100_000
 
     _, _, player = _current_player(observation)
+    current = _read(observation, "current", {})
     field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
     hand_ids = [_card_id(hand_card) for hand_card in _iter_cards(_read(player, "hand", []))]
+    deck_ids = _deck_card_ids_for_policy(player)
     discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     bench_count = _bench_top_count(player)
     field_count = len(field_top_ids)
     free_bench = bench_count < _bench_limit(player)
+    turn_number = _safe_int(_read(current, "turn"), 0)
     seed_out_risk = field_count <= 1 and free_bench
     thin_board_basic_risk = field_count <= 2 and free_bench
     has_murkrow_source = MURKROW in field_top_ids or MURKROW in hand_ids
     has_porygon_source = PORYGON in field_top_ids or PORYGON in hand_ids
     has_honchkrow_ready = HONCHKROW in field_top_ids or HONCHKROW in hand_ids
     has_porygon2_ready = PORYGON2 in field_top_ids or PORYGON2 in hand_ids
+    honchkrow_pad_bridge = _honchkrow_pad_bridge_available(player, hand_ids, deck_ids)
 
     if _is_basic_setup_pokemon(identifier):
+        if identifier == MURKROW and honchkrow_pad_bridge and turn_number <= 1:
+            return 86_000
         if seed_out_risk:
             return 300_000 + (24_000 if identifier == MURKROW else 12_000)
         if thin_board_basic_risk:
@@ -3309,15 +3315,19 @@ def _poke_pad_target_score(observation, card):
         score = 118_000 if identifier == MURKROW else 92_000
         if free_bench:
             score += 34_000
-        if identifier == MURKROW and not has_honchkrow_ready:
+        if identifier == MURKROW and not has_honchkrow_ready and not honchkrow_pad_bridge:
             score += 16_000
         if identifier == PORYGON and not has_porygon2_ready:
             score += 10_000
         return score
 
     if seed_out_risk or thin_board_basic_risk:
+        if identifier == HONCHKROW and honchkrow_pad_bridge and turn_number <= 1:
+            return 275_000
         return -85_000
     if identifier == HONCHKROW:
+        if honchkrow_pad_bridge and turn_number <= 1:
+            return 275_000
         return 180_000 if has_murkrow_source else 22_000
     if identifier == PORYGON2:
         if not _porygon_development_allowed(player):
@@ -4710,6 +4720,14 @@ def _honchkrow_chain_available(player, hand_ids=None, deck_ids=None):
         if identifier == MURKROW and has_honchkrow_access and has_energy:
             return True
     return False
+
+
+def _honchkrow_pad_bridge_available(player, hand_ids=None, deck_ids=None):
+    if hand_ids is None:
+        hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
+    if deck_ids is None:
+        deck_ids = _deck_card_ids_for_policy(player)
+    return TEAM_ROCKET_TRANSCEIVER in hand_ids and PROTON in deck_ids and MURKROW in deck_ids
 
 
 def _bench_honchkrow_promotion_available(player, hand_ids=None, deck_ids=None):
