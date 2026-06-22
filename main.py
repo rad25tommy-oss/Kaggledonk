@@ -245,11 +245,11 @@ POLICY_CONFIG_JSON = r'''{
     "avoidNonKoRocketFeatherIntoHealing": {
       "enabled": true,
       "zeroFuelScore": -22000,
-      "koBaseScore": 16500,
+      "koBaseScore": 15047,
       "koPerRequiredSupporterScore": 700,
       "lowDeckKoBonus": 2400,
-      "baseNonKoScore": 900,
-      "perSupporterNonKoScore": 400,
+      "baseNonKoScore": 891,
+      "perSupporterNonKoScore": 442,
       "missingKoSupporterPenalty": 1800,
       "oneSupporterPenalty": 4800,
       "hp120Penalty": 2800,
@@ -371,21 +371,24 @@ POLICY_CONFIG_JSON = r'''{
       "nonKoBaseScore": 6200,
       "nonKoPerSupporterScore": 520,
       "lowDeckThreshold": 10,
-      "lowDeckPenalty": 2800
+      "lowDeckPenalty": 2800,
+      "lateTrashThreshold": 15,
+      "lateTrashPlanBonus": 52000,
+      "lateTrashAttackBonus": 36000,
+      "lateTrashKoBonus": 18000,
+      "lateTrashPerExtraSupporterScore": 1400,
+      "lateTrashHighDamageScore": 24
     },
     "preferArianaEnergyDig": {
       "enabled": true,
-      "noHandEnergyBonus": 9200,
+      "noHandEnergyBonus": 11786,
       "attackStarvedBonus": 10500,
-      "transceiverArianaBonus": 8800,
+      "transceiverArianaBonus": 5848,
       "pokegearArianaBonus": 5200,
-      "petrelArianaBonus": 4600,
+      "petrelArianaBonus": 5815,
       "factoryBeforeArianaBonus": 34000,
       "factoryBeforeArianaDrawGainBonus": 8000,
-      "factoryBeforeArianaPenalty": 6000,
-      "factoryArianaBurstBonus": 30000,
-      "factoryArianaBurstPerCardBonus": 4500,
-      "factoryArianaBurstEarlyBonus": 8000
+      "factoryBeforeArianaPenalty": 6000
     },
     "pokePadEvolutionAttack": {
       "enabled": true,
@@ -412,7 +415,7 @@ POLICY_CONFIG_JSON = r'''{
   },
   "weights": {
     "identity": {
-      "transceiver": 180,
+      "transceiver": 248,
       "proton": -600,
       "petrel": 140,
       "ariana": 220,
@@ -423,7 +426,7 @@ POLICY_CONFIG_JSON = r'''{
       "pokegear": 65,
       "pokePad": 75,
       "nightStretcher": 55,
-      "miracleHeadset": 95
+      "miracleHeadset": 68
     },
     "board": {
       "benchMurkrow": 240,
@@ -450,18 +453,18 @@ POLICY_CONFIG_JSON = r'''{
       "preserveAthenaPrizeRaceAhead": 380
     },
     "energy": {
-      "openEnergyRight": 60,
+      "openEnergyRight": 74,
       "usedEnergyPenalty": -450,
-      "prepareWhenNoAttack": 220,
-      "prepareBenchWhenNoAttack": 170,
+      "prepareWhenNoAttack": 323,
+      "prepareBenchWhenNoAttack": 206,
       "immediateAttack": 360,
-      "immediateKo": 260,
+      "immediateKo": 275,
       "futurePlan": 160,
       "proactivePlan": 70,
       "honchkrowTarget": 240,
       "porygonAttackerTarget": 210,
-      "murkrowTarget": 65,
-      "murkrowNonImmediatePenalty": -120,
+      "murkrowTarget": 78,
+      "murkrowNonImmediatePenalty": -142,
       "porygonBasicTarget": 55,
       "teamRocketEnergyOnPorygonPenalty": -260,
       "ignitionOnPorygonAttacker": 420,
@@ -471,16 +474,16 @@ POLICY_CONFIG_JSON = r'''{
     },
     "attack": {
       "rocketFeather": 420,
-      "rocketFeatherKo": 260,
-      "koOrPrize": 240,
+      "rocketFeatherKo": 269,
+      "koOrPrize": 218,
       "tauntWithoutKoPenalty": -520,
       "nonKoBeforeSetupPenalty": -140,
-      "rocketFeatherAthenaDiscardPrizeRacePenalty": -430,
+      "rocketFeatherAthenaDiscardPrizeRacePenalty": -412,
       "rocketFeatherCostLance": 160,
-      "rocketFeatherCostGiovanni": 100,
-      "rocketFeatherCostArcher": 50,
+      "rocketFeatherCostGiovanni": 151,
+      "rocketFeatherCostArcher": 51,
       "rocketFeatherCostPetrel": 0,
-      "rocketFeatherCostAthena": -260,
+      "rocketFeatherCostAthena": -216,
       "rocketFeatherCostAthenaNoNextSupporterPenalty": -1200
     },
     "turnRights": {
@@ -537,6 +540,7 @@ SELECT_CONTEXT_NAMES = {
     0: "main",
     1: "setup active pokemon",
     2: "setup bench pokemon",
+    4: "promote active pokemon",
     7: "to hand search",
     8: "rocket feather discard cost",
     38: "mulligan bonus draw",
@@ -2505,6 +2509,8 @@ PORYGON2_R_COMMAND_ATTACKS = {670}
 MURKROW_TEMPT_ATTACK = 652
 MURKROW_SECONDARY_ATTACK = 653
 MURKROW_ATTACKS = {MURKROW_TEMPT_ATTACK, MURKROW_SECONDARY_ATTACK}
+HOP_PHANTUMP = 878
+HOP_PHANTUMP_DODGE_ATTACK = 1266
 ROCKET_SUPPORTER_COST_PRIORITY = {
     1220: 100,  # Team Rocket's Proton / Lance: lowest future value after setup
     1218: 90,  # Team Rocket's Giovanni / Sakaki
@@ -2527,17 +2533,123 @@ GIOVANNI = 1218
 ARCHER = 1217
 ARIANA = 1216
 FACTORY = 1257
+DRAW_RESET_SUPPORTERS = {ARCHER, ARIANA}
 ABRA = 741
 KADABRA = 742
 ALAKAZAM = 743
-DARK_WEAK_TO_IDS = {ABRA, KADABRA, ALAKAZAM, 431, 741, 742, 743, 770, 771, 772, 1059}
+WEAKNESS_IDS_BY_TYPE = {
+    "grass": {
+        21, 22, 23, 41, 57, 61, 81, 82, 83, 117, 135, 136, 137, 187, 188, 189,
+        225, 227, 228, 229, 248, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291,
+        292, 293, 312, 334, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389,
+        440, 441, 442, 443, 444, 447, 464, 526, 527, 532, 533, 534, 538, 539, 540, 599,
+        600, 601, 603, 604, 607, 608, 609, 610, 611, 614, 615, 616, 617, 618, 642, 643,
+        644, 645, 646, 647, 648, 649, 669, 670, 671, 675, 676, 682, 683, 684, 685, 686,
+        687, 688, 690, 691, 775, 776, 820, 821, 822, 823, 824, 827, 828, 830, 831, 832,
+        881, 882, 887, 888, 889, 892, 893, 894, 895, 896, 897, 973, 975, 976, 985, 986,
+        1046, 1047, 1048, 1049, 1050, 1051, 1052, 1053, 1054, 1056, 1063,
+    },
+    "fire": {
+        25, 26, 27, 28, 29, 45, 67, 68, 69, 70, 71, 72, 73, 74, 75, 84,
+        85, 86, 88, 89, 90, 91, 92, 93, 94, 95, 96, 118, 126, 127, 128, 129,
+        142, 143, 146, 147, 148, 149, 150, 165, 166, 167, 168, 169, 170, 177, 178, 190,
+        191, 192, 198, 199, 200, 201, 235, 236, 237, 238, 252, 253, 254, 255, 294, 295,
+        296, 297, 299, 321, 322, 323, 335, 336, 338, 341, 342, 343, 344, 345, 346, 347,
+        348, 349, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 465, 467,
+        479, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 543, 544, 545, 546, 547,
+        557, 558, 559, 560, 561, 562, 563, 564, 565, 566, 619, 620, 621, 622, 623, 624,
+        639, 640, 641, 650, 651, 652, 653, 654, 655, 656, 657, 658, 694, 695, 696, 697,
+        698, 699, 700, 706, 707, 708, 709, 710, 711, 712, 713, 714, 778, 779, 780, 781,
+        782, 783, 784, 785, 786, 787, 835, 836, 837, 838, 839, 840, 850, 851, 852, 853,
+        854, 899, 900, 901, 909, 910, 911, 912, 913, 914, 915, 916, 917, 918, 919, 920,
+        921, 922, 923, 924, 925, 987, 988, 989, 990, 991, 992, 993, 1011, 1012, 1013, 1014,
+        1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1065, 1066, 1067, 1068,
+    },
+    "water": {
+        30, 31, 46, 76, 77, 78, 79, 97, 98, 99, 151, 152, 153, 202, 203, 204,
+        205, 239, 256, 257, 258, 259, 319, 320, 324, 325, 326, 350, 351, 352, 353, 354,
+        355, 356, 357, 358, 405, 406, 408, 409, 410, 411, 412, 413, 490, 491, 492, 493,
+        494, 495, 496, 497, 567, 568, 569, 570, 571, 572, 573, 659, 660, 661, 662, 663,
+        664, 665, 666, 715, 716, 717, 718, 719, 788, 789, 790, 791, 792, 793, 794, 795,
+        796, 797, 855, 856, 857, 926, 927, 928, 929, 930, 931, 932, 933, 934, 935, 936,
+        1025, 1026, 1027,
+    },
+    "lightning": {
+        33, 34, 35, 47, 48, 49, 50, 51, 64, 100, 102, 105, 106, 107, 108, 123,
+        155, 157, 158, 159, 172, 173, 174, 180, 181, 182, 197, 206, 207, 208, 240, 241,
+        242, 250, 260, 261, 262, 263, 264, 270, 271, 277, 298, 307, 308, 311, 314, 318,
+        327, 337, 339, 340, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370,
+        407, 414, 415, 416, 417, 420, 421, 422, 425, 456, 457, 458, 463, 466, 476, 477,
+        478, 498, 499, 500, 501, 502, 503, 504, 505, 541, 542, 551, 552, 553, 574, 575,
+        576, 577, 578, 579, 583, 589, 590, 591, 632, 633, 634, 638, 667, 689, 701, 702,
+        720, 721, 724, 725, 726, 727, 728, 757, 773, 774, 798, 799, 803, 804, 805, 826,
+        858, 859, 891, 937, 938, 939, 945, 946, 947, 952, 953, 983, 984, 1003, 1004, 1005,
+        1007, 1008, 1023, 1024, 1028, 1029, 1030, 1031, 1034, 1062, 1064, 1075,
+    },
+    "psychic": {
+        40, 58, 113, 114, 115, 116, 224, 226, 333, 437, 438, 439, 445, 446, 528, 529,
+        530, 531, 602, 605, 606, 672, 673, 674, 677, 678, 679, 680, 681, 819, 883, 884,
+        885, 886, 890, 972, 974, 977, 978, 979, 1055,
+    },
+    "fighting": {
+        24, 36, 37, 43, 44, 52, 59, 60, 65, 66, 124, 125, 130, 138, 139, 140,
+        141, 145, 160, 161, 175, 176, 210, 211, 212, 213, 230, 232, 233, 234, 244, 249,
+        251, 265, 266, 267, 268, 269, 304, 305, 306, 309, 310, 317, 328, 329, 371, 372,
+        373, 374, 375, 376, 377, 390, 391, 392, 426, 427, 428, 448, 449, 450, 451, 452,
+        453, 454, 455, 459, 460, 461, 462, 468, 469, 470, 471, 472, 473, 474, 475, 510,
+        511, 512, 513, 514, 515, 535, 536, 537, 554, 555, 556, 584, 585, 586, 587, 588,
+        612, 613, 626, 627, 628, 629, 630, 631, 692, 693, 703, 704, 705, 732, 733, 734,
+        735, 736, 737, 738, 739, 740, 756, 758, 759, 760, 761, 770, 771, 772, 777, 806,
+        807, 808, 809, 810, 811, 814, 829, 833, 834, 841, 842, 843, 844, 845, 846, 847,
+        848, 849, 868, 869, 870, 871, 872, 898, 948, 949, 950, 951, 954, 955, 956, 957,
+        980, 981, 982, 996, 997, 998, 999, 1000, 1001, 1002, 1006, 1009, 1010, 1035, 1036, 1037,
+        1038, 1057, 1058, 1059, 1060, 1061, 1069, 1070, 1071, 1072, 1073, 1074, 1076,
+    },
+    "darkness": {
+        38, 54, 55, 80, 109, 111, 112, 131, 132, 133, 162, 163, 183, 184, 185, 186,
+        215, 216, 217, 218, 219, 220, 221, 223, 245, 246, 273, 274, 275, 276, 332, 429,
+        430, 431, 432, 433, 434, 435, 436, 516, 517, 518, 519, 520, 521, 522, 523, 524,
+        525, 592, 593, 594, 595, 596, 597, 598, 635, 636, 668, 741, 742, 743, 744, 745,
+        746, 747, 748, 749, 750, 752, 753, 764, 765, 812, 813, 817, 818, 873, 874, 875,
+        876, 877, 878, 879, 880, 963, 964, 969, 971, 1042, 1043,
+    },
+    "metal": {
+        32, 39, 53, 56, 101, 103, 104, 110, 134, 154, 156, 164, 179, 209, 214, 222,
+        243, 247, 272, 278, 279, 280, 315, 316, 330, 331, 418, 419, 423, 424, 506, 507,
+        508, 509, 580, 581, 582, 637, 722, 723, 729, 730, 731, 751, 762, 763, 766, 767,
+        768, 769, 800, 801, 802, 815, 816, 825, 860, 861, 862, 863, 864, 865, 866, 867,
+        940, 941, 942, 943, 944, 958, 959, 960, 961, 962, 965, 966, 967, 968, 970, 1032,
+        1033, 1039, 1040, 1041, 1044, 1045,
+    },
+}
+
+RESISTANCE_IDS_BY_TYPE = {
+    "grass": {
+        84, 85, 86, 118, 142, 143, 165, 166, 167, 168, 169, 170, 190, 191, 192, 294,
+        295, 296, 297, 299, 335, 336, 465, 467, 543, 544, 545, 546, 547, 619, 620, 621,
+        622, 623, 624, 639, 640, 641, 694, 695, 696, 697, 698, 699, 700, 835, 836, 837,
+        838, 839, 840, 899, 900, 901, 987, 988, 989, 990, 991, 992, 993, 1065, 1066, 1067,
+        1068,
+    },
+    "fighting": {
+        38, 54, 55, 64, 80, 109, 111, 112, 123, 131, 132, 133, 162, 163, 172, 173,
+        174, 183, 184, 185, 186, 197, 215, 216, 217, 218, 219, 220, 221, 223, 245, 246,
+        250, 270, 271, 273, 274, 275, 276, 277, 298, 307, 308, 311, 318, 332, 337, 339,
+        340, 407, 414, 425, 429, 430, 431, 432, 433, 434, 435, 436, 456, 457, 458, 463,
+        466, 476, 477, 478, 516, 517, 518, 519, 520, 521, 522, 523, 524, 525, 541, 542,
+        551, 552, 553, 578, 579, 589, 590, 591, 592, 593, 594, 595, 596, 597, 598, 632,
+        633, 634, 635, 636, 638, 668, 689, 701, 702, 741, 742, 743, 744, 745, 746, 747,
+        748, 749, 750, 752, 753, 757, 764, 765, 773, 774, 812, 813, 817, 818, 826, 873,
+        874, 875, 876, 877, 878, 879, 880, 891, 952, 953, 963, 964, 969, 971, 983, 984,
+        1003, 1004, 1005, 1007, 1008, 1023, 1024, 1042, 1043, 1062, 1064, 1075,
+    },
+}
+
+DARK_WEAK_TO_IDS = WEAKNESS_IDS_BY_TYPE["darkness"]
 DARK_WEAK_NAME_HINTS = (
     "abra",
     "kadabra",
     "alakazam",
-    "gastly",
-    "haunter",
-    "gengar",
     "mewtwo",
 )
 TWO_PRIZE_POKEMON_IDS = {
@@ -2569,6 +2681,13 @@ def load_deck():
 
 
 MY_DECK = load_deck()
+PUBLIC_DECK_MEMORY = {}
+HOP_DODGE_MEMORY = {}
+
+
+def _reset_public_knowledge():
+    PUBLIC_DECK_MEMORY.clear()
+    HOP_DODGE_MEMORY.clear()
 
 
 def _policy_rule_enabled(rule_id, fallback=True):
@@ -2953,6 +3072,8 @@ def _is_ariana_compression_option(observation, option):
         return False
     if identifier in (MURKROW, PORYGON, HONCHKROW, PORYGON2):
         return True
+    if identifier == NIGHT_STRETCHER:
+        return _night_stretcher_immediate_compression_score(observation) >= 75_000
     if identifier in (POKE_PAD, POKEGEAR, ROTO_STICK):
         return True
     if identifier == TEAM_ROCKET_TRANSCEIVER:
@@ -2974,18 +3095,48 @@ def _seed_out_basic_play_score(observation, option):
     return None
 
 
+def _normalize_attack_type(type_name):
+    raw = str(type_name or "").strip().lower().replace(" ", "-")
+    return {
+        "dark": "darkness",
+        "electric": "lightning",
+        "steel": "metal",
+        "none": "colorless",
+    }.get(raw, raw)
+
+
+def _pokemon_has_weakness_to(pokemon, attack_type):
+    defender_id = _card_id(pokemon)
+    normalized_type = _normalize_attack_type(attack_type)
+    if defender_id in WEAKNESS_IDS_BY_TYPE.get(normalized_type, set()):
+        return True
+    if normalized_type == "darkness":
+        defender_name = str(_read(pokemon, "name", "")).lower()
+        return any(hint in defender_name for hint in DARK_WEAK_NAME_HINTS)
+    return False
+
+
+def _pokemon_has_resistance_to(pokemon, attack_type):
+    defender_id = _card_id(pokemon)
+    normalized_type = _normalize_attack_type(attack_type)
+    return defender_id in RESISTANCE_IDS_BY_TYPE.get(normalized_type, set())
+
+
+def _damage_after_type_modifier(base_damage, defender, attack_type):
+    damage = max(0, int(base_damage or 0))
+    if _pokemon_has_weakness_to(defender, attack_type):
+        damage *= 2
+    if _pokemon_has_resistance_to(defender, attack_type):
+        damage = max(0, damage - 30)
+    return damage
+
+
 def _rocket_feather_damage_per_supporter(opponent_active):
-    defender_id = _card_id(opponent_active)
-    defender_name = str(_read(opponent_active, "name", "")).lower()
-    dark_weak_by_name = any(hint in defender_name for hint in DARK_WEAK_NAME_HINTS)
-    return 120 if defender_id in DARK_WEAK_TO_IDS or dark_weak_by_name else 60
+    return _damage_after_type_modifier(60, opponent_active, "darkness")
 
 
 def _murkrow_taunt_damage(opponent_active):
-    defender_id = _card_id(opponent_active)
-    defender_name = str(_read(opponent_active, "name", "")).lower()
-    dark_weak_by_name = any(hint in defender_name for hint in DARK_WEAK_NAME_HINTS)
-    return 60 if defender_id in DARK_WEAK_TO_IDS or dark_weak_by_name else 30
+    return _damage_after_type_modifier(30, opponent_active, "darkness")
 
 
 def _active_murkrow_can_evolve_to_honchkrow(observation):
@@ -3009,7 +3160,7 @@ def _active_murkrow_can_evolve_to_honchkrow(observation):
 
 
 def _deck_basic_setup_count(player):
-    return _count_cards(player, ("deck",), lambda card_id: card_id in BASIC_SETUP_POKEMON)
+    return _deck_card_count_for_policy(player, lambda card_id: card_id in BASIC_SETUP_POKEMON)
 
 
 def _tempt_supporter_target_score(player, identifier):
@@ -3054,6 +3205,7 @@ def _night_stretcher_target_score(observation, card):
     current, your_index, player = _current_player(observation)
     field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
     hand_ids = [_card_id(hand_card) for hand_card in _iter_cards(_read(player, "hand", []))]
+    discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     bench_count = _bench_top_count(player)
     field_count = len(field_top_ids)
     free_bench = bench_count < _bench_limit(player)
@@ -3085,6 +3237,8 @@ def _night_stretcher_target_score(observation, card):
     if identifier == PORYGON2:
         if not _porygon_development_allowed(player):
             return 12_000
+        if discard_supporters >= _porygon2_late_trash_threshold() and has_porygon_source:
+            return 240_000
         return 165_000 if has_porygon_source else 18_000
     if identifier in ROCKET_FIELD_POKEMON:
         return 40_000
@@ -3104,6 +3258,29 @@ def _best_night_stretcher_target_score(observation):
     return max(_night_stretcher_target_score(observation, card) for card in targets)
 
 
+def _night_stretcher_immediate_compression_score(observation):
+    _, _, player = _current_player(observation)
+    field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
+    free_bench = _bench_top_count(player) < _bench_limit(player)
+    best = -100_000
+
+    for zone in ("discard", "trash"):
+        for card in _iter_cards(_read(player, zone, [])):
+            identifier = _card_id(card)
+            if identifier in BASIC_SETUP_POKEMON and free_bench:
+                score = 176_000 if identifier == MURKROW else 142_000
+            elif identifier == HONCHKROW and MURKROW in field_top_ids:
+                score = 168_000
+            elif identifier == PORYGON2 and PORYGON in field_top_ids and _porygon_development_allowed(player):
+                score = 154_000
+            else:
+                continue
+            if score > best:
+                best = score
+
+    return best
+
+
 def _poke_pad_target_score(observation, card):
     identifier = _card_id(card)
     if identifier is None:
@@ -3112,6 +3289,7 @@ def _poke_pad_target_score(observation, card):
     _, _, player = _current_player(observation)
     field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
     hand_ids = [_card_id(hand_card) for hand_card in _iter_cards(_read(player, "hand", []))]
+    discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     bench_count = _bench_top_count(player)
     field_count = len(field_top_ids)
     free_bench = bench_count < _bench_limit(player)
@@ -3143,6 +3321,8 @@ def _poke_pad_target_score(observation, card):
     if identifier == PORYGON2:
         if not _porygon_development_allowed(player):
             return 12_000
+        if discard_supporters >= _porygon2_late_trash_threshold() and has_porygon_source:
+            return 240_000
         return 165_000 if has_porygon_source else 18_000
     if identifier in ROCKET_FIELD_POKEMON:
         return 40_000
@@ -3156,6 +3336,10 @@ def _best_poke_pad_target_score(observation):
         identifier = _card_id(card)
         if identifier in ROCKET_FIELD_POKEMON:
             targets.append(card)
+    if not targets:
+        for identifier in _deck_card_ids_for_policy(player):
+            if identifier in ROCKET_FIELD_POKEMON:
+                targets.append({"id": identifier})
     if not targets:
         return -100_000
     return max(_poke_pad_target_score(observation, card) for card in targets)
@@ -3199,6 +3383,154 @@ def _count_cards(player, zones, predicate):
             if predicate(_card_id(card)):
                 total += 1
     return total
+
+
+def _card_serial(card):
+    value = _read(card, "serial")
+    if value is None:
+        return None
+    return _safe_int(value, None)
+
+
+def _compact_public_card(card):
+    identifier = _card_id(card)
+    if identifier is None:
+        return None
+    compact = {"id": identifier}
+    serial = _card_serial(card)
+    if serial is not None:
+        compact["serial"] = serial
+    player_index = _read(card, "playerIndex")
+    if player_index is not None:
+        compact["playerIndex"] = _safe_int(player_index, 0)
+    name = _read(card, "name")
+    if name:
+        compact["name"] = name
+    return compact
+
+
+def _physical_cards_from_in_play(card):
+    top = _top_card(card)
+    if top is None:
+        return
+    yield top
+    for key in ("preEvolution", "energyCards", "tools"):
+        for nested in _iter_cards(_read(top, key, [])):
+            yield nested
+
+
+def _visible_non_deck_cards(player):
+    for zone in ("hand", "discard", "trash", "prize", "prizes"):
+        for card in _iter_cards(_read(player, zone, [])):
+            yield card
+    for zone in ("active", "bench"):
+        cards = _read(player, zone, [])
+        if not isinstance(cards, list):
+            continue
+        for slot in cards:
+            for card in _iter_cards(slot):
+                yield from _physical_cards_from_in_play(card)
+
+
+def _visible_non_deck_serials(player):
+    serials = set()
+    for card in _visible_non_deck_cards(player):
+        serial = _card_serial(card)
+        if serial is not None:
+            serials.add(serial)
+    return serials
+
+
+def _player_index_hint(player):
+    value = _read(player, "playerIndex")
+    if value is not None:
+        return _safe_int(value, None)
+    for card in _visible_non_deck_cards(player):
+        value = _read(card, "playerIndex")
+        if value is not None:
+            return _safe_int(value, None)
+    return None
+
+
+def _remember_public_information(observation):
+    select = _select_payload(observation)
+    deck = _read(select, "deck", None)
+    if not isinstance(deck, list):
+        return
+
+    cards = []
+    player_indexes = []
+    for card in deck:
+        compact = _compact_public_card(_top_card(card))
+        if compact is None:
+            continue
+        cards.append(compact)
+        player_index = compact.get("playerIndex")
+        if player_index is not None:
+            player_indexes.append(player_index)
+    if not cards and deck:
+        return
+
+    current = _read(observation, "current", {})
+    if player_indexes:
+        player_index = max(set(player_indexes), key=player_indexes.count)
+    else:
+        player_index = _safe_int(_read(current, "yourIndex"), 0)
+
+    player = _player_state(current, player_index)
+    deck_count = _deck_count(player)
+    if deck_count > 0 and len(cards) != deck_count:
+        return
+
+    PUBLIC_DECK_MEMORY[player_index] = cards
+
+
+def _known_public_deck_cards(player):
+    player_index = _player_index_hint(player)
+    if player_index is None:
+        return None
+    cards = PUBLIC_DECK_MEMORY.get(player_index)
+    if not isinstance(cards, list):
+        return None
+
+    visible_serials = _visible_non_deck_serials(player)
+    if visible_serials:
+        cards = [
+            card for card in cards
+            if _card_serial(card) is None or _card_serial(card) not in visible_serials
+        ]
+
+    deck_count = _deck_count(player)
+    if deck_count > 0 and len(cards) != deck_count:
+        return None
+    return cards
+
+
+def _estimated_remaining_deck_ids(player):
+    remaining = list(MY_DECK)
+    for card in _visible_non_deck_cards(player):
+        identifier = _card_id(card)
+        if identifier in remaining:
+            remaining.remove(identifier)
+    return remaining
+
+
+def _deck_card_ids_for_policy(player):
+    known = _known_public_deck_cards(player)
+    if known is not None:
+        return [_card_id(card) for card in known if _card_id(card) is not None]
+
+    deck = _read(player, "deck", [])
+    visible_ids = [_card_id(card) for card in _iter_cards(deck)]
+    visible_ids = [identifier for identifier in visible_ids if identifier is not None]
+    if visible_ids:
+        return visible_ids
+
+    return _estimated_remaining_deck_ids(player)
+
+
+def _deck_card_count_for_policy(player, predicate):
+    return sum(1 for identifier in _deck_card_ids_for_policy(player) if predicate(identifier))
 
 
 def _effect_id(observation):
@@ -3375,6 +3707,76 @@ def _lost_rocket_mon_last_turn(observation, current, player):
     return _logs_indicate_lost_rocket_mon_last_turn(observation, your_index)
 
 
+def _remember_hop_phantump_dodge(observation):
+    current = _read(observation, "current", {})
+    your_index = _safe_int(_read(current, "yourIndex"), -1)
+    turn = _safe_int(_read(current, "turn"), -1)
+    logs = _read(observation, "logs", [])
+    if your_index < 0 or turn < 0 or not isinstance(logs, list):
+        return
+
+    pending = None
+    for entry in logs:
+        if not isinstance(entry, dict):
+            continue
+        player_index = _safe_int(_read(entry, "playerIndex"), -1)
+        attack_id = _safe_int(_read(entry, "attackId", _read(entry, "attack_id")), None)
+        identifier = _card_id({"id": _read(entry, "cardId", _read(entry, "card_id"))})
+        if identifier == HOP_PHANTUMP and attack_id == HOP_PHANTUMP_DODGE_ATTACK:
+            pending = {
+                "player_index": player_index,
+                "serial": _safe_int(_read(entry, "serial"), None),
+            }
+            continue
+
+        if pending is None or "head" not in entry:
+            continue
+        if player_index != pending["player_index"]:
+            continue
+
+        if bool(_read(entry, "head")):
+            HOP_DODGE_MEMORY[pending["player_index"]] = {
+                "against_player": your_index,
+                "turn": turn,
+                "serial": pending["serial"],
+            }
+        else:
+            existing = HOP_DODGE_MEMORY.get(pending["player_index"])
+            if (
+                isinstance(existing, dict)
+                and existing.get("against_player") == your_index
+                and existing.get("turn") == turn
+            ):
+                HOP_DODGE_MEMORY.pop(pending["player_index"], None)
+        pending = None
+
+
+def _opponent_active_has_hop_dodge_protection(observation):
+    current = _read(observation, "current", {})
+    your_index = _safe_int(_read(current, "yourIndex"), -1)
+    turn = _safe_int(_read(current, "turn"), -1)
+    if your_index < 0 or turn < 0:
+        return False
+
+    opponent_index = 1 - your_index
+    opponent = _player_state(current, opponent_index)
+    active = _top_card(_read(opponent, "active", []))
+    if _card_id(active) != HOP_PHANTUMP:
+        return False
+
+    memory = HOP_DODGE_MEMORY.get(opponent_index)
+    if not isinstance(memory, dict):
+        return False
+    if memory.get("against_player") != your_index or memory.get("turn") != turn:
+        return False
+
+    memory_serial = memory.get("serial")
+    active_serial = _safe_int(_read(active, "serial"), None)
+    if memory_serial is not None and active_serial is not None and memory_serial != active_serial:
+        return False
+    return True
+
+
 def _card_name_text(card):
     chunks = []
     for key in ("name", "cardName", "card_name", "englishName", "english_name", "pokemonName", "pokemon_name"):
@@ -3487,7 +3889,8 @@ def _planned_attack_damage(player, attacker, target, attack_id):
         return _rocket_feather_damage_per_supporter(target) * min(4, hand_supporters)
     if attacker_id == PORYGON2 and attack_id in PORYGON2_R_COMMAND_ATTACKS:
         discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
-        return discard_supporters * _policy_rule_number("porygon2RCommandFallback", "damagePerTrashRocketSupporter", 20)
+        damage = discard_supporters * _policy_rule_number("porygon2RCommandFallback", "damagePerTrashRocketSupporter", 20)
+        return _damage_after_type_modifier(damage, target, "colorless")
     if attacker_id == MURKROW and attack_id in MURKROW_ATTACKS:
         return 0
     return 0
@@ -3502,6 +3905,15 @@ def _planned_attack_ids(attacker):
     if attacker_id == MURKROW:
         return ()
     return ()
+
+
+def _only_ariana_rocket_feather_fuel(player):
+    hand_supporter_ids = [
+        _card_id(card)
+        for card in _iter_cards(_read(player, "hand", []))
+        if _card_id(card) in ROCKET_SUPPORTERS
+    ]
+    return len(hand_supporter_ids) == 1 and hand_supporter_ids[0] == ARIANA
 
 
 def _planned_attacker_needs_energy(attacker, attack_id):
@@ -3571,6 +3983,30 @@ def _donkarasu_can_ko_from_bench(observation):
     return hand_supporters >= required_supporters
 
 
+def _porygon2_late_trash_threshold():
+    return _policy_rule_number("porygon2RCommandFallback", "lateTrashThreshold", 15)
+
+
+def _porygon2_late_trash_bonus(discard_supporters, damage, can_ko=False):
+    threshold = _porygon2_late_trash_threshold()
+    if discard_supporters < threshold:
+        return 0
+    score = _policy_rule_number("porygon2RCommandFallback", "lateTrashAttackBonus", 36_000)
+    score += max(0, discard_supporters - threshold) * _policy_rule_number(
+        "porygon2RCommandFallback",
+        "lateTrashPerExtraSupporterScore",
+        1_400,
+    )
+    score += max(0, min(max(0, damage), 420) - 180) * _policy_rule_number(
+        "porygon2RCommandFallback",
+        "lateTrashHighDamageScore",
+        24,
+    )
+    if can_ko:
+        score += _policy_rule_number("porygon2RCommandFallback", "lateTrashKoBonus", 18_000)
+    return score
+
+
 def _turn_plan_score(player, target, damage, can_ko, prize_count, needs_energy, needs_switch, seed_guard_blocked):
     remaining_prizes = max(1, _prize_cards_remaining(player))
     game_end = can_ko and prize_count >= remaining_prizes
@@ -3608,6 +4044,7 @@ def _build_donkrow_turn_plan(observation):
     if target_hp <= 0:
         return None
 
+    discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     can_switch = _has_switch_option(observation)
     energy_attached = bool(_read(current, "energyAttached", _read(player, "energyAttached", False)))
     seed_guard_blocked = _needs_seed_out_bench_guard(player) and _has_basic_play_option(observation)
@@ -3653,10 +4090,14 @@ def _build_donkrow_turn_plan(observation):
                 if not can_ko:
                     score -= _policy_rule_number("donkrowTurnPlan", "murkrowNonKoPenalty", 18_000)
             elif attacker_id == PORYGON2:
-                if not can_ko:
-                    score -= max(_policy_rule_number("donkrowTurnPlan", "porygon2NonKoPenalty", 8_000), 28_000)
-                if _honchkrow_chain_available(player) and not (can_ko and prize_count >= 2):
-                    score -= 18_000
+                if discard_supporters >= _porygon2_late_trash_threshold():
+                    score += _policy_rule_number("porygon2RCommandFallback", "lateTrashPlanBonus", 52_000)
+                    score += _porygon2_late_trash_bonus(discard_supporters, damage, can_ko)
+                else:
+                    if not can_ko:
+                        score -= max(_policy_rule_number("donkrowTurnPlan", "porygon2NonKoPenalty", 8_000), 28_000)
+                    if _honchkrow_chain_available(player) and not (can_ko and prize_count >= 2):
+                        score -= 18_000
             plan = DonkrowTurnPlan(
                 attacker_card=attacker,
                 attacker_id=attacker_id,
@@ -3711,8 +4152,79 @@ def _bench_attacker_damage_after_sakaki(player, attacker, target, giovanni_from_
         return _rocket_feather_damage_per_supporter(target) * min(4, fuel_after_sakaki)
     if identifier == PORYGON2:
         discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
-        return (discard_supporters + 1) * _policy_rule_number("porygon2RCommandFallback", "damagePerTrashRocketSupporter", 20)
+        damage = (discard_supporters + 1) * _policy_rule_number("porygon2RCommandFallback", "damagePerTrashRocketSupporter", 20)
+        return _damage_after_type_modifier(damage, target, "colorless")
     return 0
+
+
+def _bench_candidate_damage_after_sakaki(observation, attacker, target, giovanni_from_hand=True):
+    current, _, player = _current_player(observation)
+    identifier = _card_id(attacker)
+    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
+    hand_supporters = _count_cards(player, ("hand",), lambda card_id: card_id in ROCKET_SUPPORTERS)
+    fuel_after_sakaki = max(0, hand_supporters - (1 if giovanni_from_hand else 0))
+    energy_already_used = _energy_attached_this_turn(current, player)
+    energy_cards = _attached_energy_cards(attacker)
+    energy_ids = _attached_energy_card_ids(attacker)
+
+    if identifier == HONCHKROW:
+        if energy_cards <= 0 and (energy_already_used or not (TEAM_ROCKET_ENERGY in hand_ids or IGNITION_ENERGY in hand_ids)):
+            return 0
+        if fuel_after_sakaki <= 0:
+            return 0
+        return _rocket_feather_damage_per_supporter(target) * min(4, fuel_after_sakaki)
+
+    if identifier == MURKROW:
+        if HONCHKROW not in hand_ids:
+            return 0
+        if bool(_read(attacker, "appearThisTurn", False)):
+            return 0
+        if energy_cards <= 0 and (energy_already_used or not (TEAM_ROCKET_ENERGY in hand_ids or IGNITION_ENERGY in hand_ids)):
+            return 0
+        if fuel_after_sakaki <= 0:
+            return 0
+        return _rocket_feather_damage_per_supporter(target) * min(4, fuel_after_sakaki)
+
+    if identifier == PORYGON2:
+        if energy_cards <= 0 and IGNITION_ENERGY not in energy_ids and (energy_already_used or IGNITION_ENERGY not in hand_ids):
+            return 0
+        discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
+        damage = (discard_supporters + 1) * _policy_rule_number("porygon2RCommandFallback", "damagePerTrashRocketSupporter", 20)
+        return _damage_after_type_modifier(damage, target, "colorless")
+
+    return 0
+
+
+def _sakaki_bench_prize_pressure(observation):
+    if not _policy_rule_enabled("sakakiRequiresKo"):
+        return False
+    current, _, player = _current_player(observation)
+    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
+    if GIOVANNI not in hand_ids:
+        return False
+
+    field_ids = _field_card_ids(player)
+    deck_ids = _deck_card_ids_for_policy(player)
+    has_honchkrow_line = (
+        HONCHKROW in field_ids
+        or HONCHKROW in hand_ids
+        or (MURKROW in field_ids and HONCHKROW in deck_ids)
+    )
+    if not has_honchkrow_line and PORYGON2 not in field_ids:
+        return False
+
+    hand_supporters = _count_cards(player, ("hand",), lambda card_id: card_id in ROCKET_SUPPORTERS)
+    fuel_after_sakaki = max(0, hand_supporters - 1)
+    min_prize = _policy_rule_number("sakakiRequiresKo", "minPrizeScore", 2)
+    for target in _opponent_bench_cards(observation):
+        remaining_hp = _remaining_hp(target)
+        prize_count = _prize_count_for_knockout(target)
+        if remaining_hp <= 0 or prize_count < min_prize:
+            continue
+        damage = _rocket_feather_damage_per_supporter(target) * min(4, fuel_after_sakaki)
+        if damage >= remaining_hp:
+            return True
+    return False
 
 
 def _sakaki_two_prize_ko_score(observation, giovanni_from_hand=True):
@@ -3727,7 +4239,7 @@ def _sakaki_two_prize_ko_score(observation, giovanni_from_hand=True):
     bench_attackers = [
         pokemon
         for slot in _read(player, "bench", [])
-        if (pokemon := _top_card(slot)) is not None and _is_sakaki_ready_bench_attacker(pokemon)
+        if (pokemon := _top_card(slot)) is not None and _card_id(pokemon) in (HONCHKROW, MURKROW, PORYGON2)
     ]
     if not bench_attackers:
         return None
@@ -3744,7 +4256,7 @@ def _sakaki_two_prize_ko_score(observation, giovanni_from_hand=True):
     best_score = None
     for attacker in bench_attackers:
         for target, remaining_hp, prize_count in targets:
-            damage = _bench_attacker_damage_after_sakaki(player, attacker, target, giovanni_from_hand)
+            damage = _bench_candidate_damage_after_sakaki(observation, attacker, target, giovanni_from_hand)
             if damage < remaining_hp:
                 continue
             score = (
@@ -3754,6 +4266,8 @@ def _sakaki_two_prize_ko_score(observation, giovanni_from_hand=True):
             )
             if _card_id(attacker) == HONCHKROW:
                 score += 4_500
+            if _card_id(attacker) == MURKROW:
+                score += 2_500
             if prize_count >= 3:
                 score += 20_000
             if best_score is None or score > best_score:
@@ -3778,7 +4292,7 @@ def _rocket_feather_fuel_needed(player):
     hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
     future_honchkrow_line = (
         HONCHKROW in field_ids
-        or (MURKROW in field_ids and (HONCHKROW in hand_ids or _count_cards(player, ("deck",), lambda card_id: card_id == HONCHKROW) > 0))
+        or (MURKROW in field_ids and (HONCHKROW in hand_ids or _deck_card_count_for_policy(player, lambda card_id: card_id == HONCHKROW) > 0))
     )
     hand_supporters = _count_cards(player, ("hand",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     return future_honchkrow_line and hand_supporters < 3
@@ -3832,8 +4346,8 @@ def _apollo_reset_score(observation, assume_legal=False, apollo_from_hand=True):
     field_ids = _field_card_ids(player)
     hand_count = _hand_count(player)
     hand_energy = _count_cards(player, ("hand",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
-    deck_energy = _count_cards(player, ("deck",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
-    deck_evolutions = _count_cards(player, ("deck",), lambda card_id: card_id in (HONCHKROW, PORYGON2))
+    deck_energy = _deck_card_count_for_policy(player, lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    deck_evolutions = _deck_card_count_for_policy(player, lambda card_id: card_id in (HONCHKROW, PORYGON2))
     needs_energy = _rocket_attack_needs_energy(player)
     needs_fuel = _rocket_feather_fuel_needed(player)
     has_murkrow_line = MURKROW in field_ids or HONCHKROW in field_ids
@@ -3947,7 +4461,7 @@ def _ariana_draw_count_for_player(player):
 
 def _needs_ariana_energy_dig(player):
     hand_energy = _count_cards(player, ("hand",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
-    deck_energy = _count_cards(player, ("deck",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    deck_energy = _deck_card_count_for_policy(player, lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
     if hand_energy > 0 or deck_energy <= 0:
         return False
     active = _top_card(_read(player, "active", []))
@@ -3989,7 +4503,7 @@ def _energy_hit_probability(population_count, energy_count, draw_count):
 
 def _supporter_energy_dig_odds(player, apollo_from_hand=True):
     hand_energy = _count_cards(player, ("hand",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
-    deck_energy = _count_cards(player, ("deck",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    deck_energy = _deck_card_count_for_policy(player, lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
     deck_count = _deck_count(player)
     if hand_energy > 0 or deck_energy <= 0 or deck_count <= 0:
         return None
@@ -4136,35 +4650,11 @@ def _factory_before_ariana_option_index(observation, options):
     return None
 
 
-def _factory_ariana_burst_score(observation, player, current, athena_draw_count, hand_ids, stadium_ids):
-    if not _policy_rule_enabled("preferArianaEnergyDig"):
-        return 0
-    if athena_draw_count < 3 or _deck_count(player) <= 0:
-        return 0
-
-    factory_available = (
-        FACTORY in stadium_ids
-        or FACTORY in hand_ids
-        or (not _stadium_played_this_turn(current, player) and _factory_option_available(observation))
-    )
-    if not factory_available:
-        return 0
-
-    capped_draw = min(athena_draw_count, _deck_count(player))
-    score = _policy_rule_number("preferArianaEnergyDig", "factoryArianaBurstBonus", 30_000)
-    score += capped_draw * _policy_rule_number("preferArianaEnergyDig", "factoryArianaBurstPerCardBonus", 4_500)
-    if _turn_number(current) <= 3:
-        score += _policy_rule_number("preferArianaEnergyDig", "factoryArianaBurstEarlyBonus", 8_000)
-    if FACTORY in stadium_ids:
-        score += 4_000
-    return score
-
-
 def _honchkrow_chain_available(player, hand_ids=None, deck_ids=None):
     if hand_ids is None:
         hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
     if deck_ids is None:
-        deck_ids = [_card_id(card) for card in _iter_cards(_read(player, "deck", []))]
+        deck_ids = _deck_card_ids_for_policy(player)
     has_energy = TEAM_ROCKET_ENERGY in hand_ids or IGNITION_ENERGY in hand_ids
     has_honchkrow_access = HONCHKROW in hand_ids or HONCHKROW in deck_ids
     for card in _field_top_cards(player):
@@ -4181,7 +4671,7 @@ def _bench_honchkrow_promotion_available(player, hand_ids=None, deck_ids=None):
     if hand_ids is None:
         hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
     if deck_ids is None:
-        deck_ids = [_card_id(card) for card in _iter_cards(_read(player, "deck", []))]
+        deck_ids = _deck_card_ids_for_policy(player)
     has_energy = TEAM_ROCKET_ENERGY in hand_ids or IGNITION_ENERGY in hand_ids
     has_honchkrow_access = HONCHKROW in hand_ids or HONCHKROW in deck_ids
     bench = _read(player, "bench", [])
@@ -4361,8 +4851,10 @@ def _choose_rocket_feather_costs(observation, options, max_count):
 
     current = _read(observation, "current", {})
     your_index = _safe_int(_read(current, "yourIndex"), 0)
+    player = _player_state(current, your_index)
     opponent = _player_state(current, 1 - your_index)
     opponent_active = _top_card(_read(opponent, "active", []))
+    min_count, _ = _selection_bounds(select)
     parsed_remaining_hp = _remaining_hp(opponent_active)
     damage_per_supporter = _rocket_feather_damage_per_supporter(opponent_active)
     required_for_ko = max(1, (parsed_remaining_hp + damage_per_supporter - 1) // damage_per_supporter) if parsed_remaining_hp > 0 else 1
@@ -4382,7 +4874,12 @@ def _choose_rocket_feather_costs(observation, options, max_count):
     if not candidates:
         return []
 
+    if min_count == 0 and not can_ko and _only_ariana_rocket_feather_fuel(player):
+        return []
+
     protected = {ARIANA, PETREL}
+    if _sakaki_bench_prize_pressure(observation):
+        protected.add(GIOVANNI)
     expendable = [item for item in candidates if item[2] not in protected]
     if len(expendable) >= required:
         candidates = expendable
@@ -4394,6 +4891,98 @@ def _choose_rocket_feather_costs(observation, options, max_count):
     candidates.sort(key=lambda item: (-item[0], item[1]))
     selected = [option_index for _, option_index, _ in candidates[:required]]
     return selected[:max_count]
+
+
+def _promotion_active_card_score(observation, option):
+    current, _, player = _current_player(observation)
+    card = _card_from_option(observation, option)
+    identifier = _card_id(card)
+    if identifier is None:
+        return -100_000
+
+    hand_ids = [_card_id(hand_card) for hand_card in _iter_cards(_read(player, "hand", []))]
+    deck_ids = _deck_card_ids_for_policy(player)
+    hand_supporters = _count_cards(player, ("hand",), lambda card_id: card_id in ROCKET_SUPPORTERS)
+    discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
+    hand_energy = _count_cards(player, ("hand",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    deck_energy = _deck_card_count_for_policy(player, lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    has_honchkrow_in_hand = HONCHKROW in hand_ids
+    has_honchkrow_access = has_honchkrow_in_hand or HONCHKROW in deck_ids
+    has_energy_access = hand_energy > 0 or deck_energy > 0
+    has_fuel = hand_supporters > 0
+    field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
+    has_honchkrow_line = any(card_id in (MURKROW, HONCHKROW) for card_id in field_top_ids)
+    porygon2_access = PORYGON2 in hand_ids or PORYGON2 in deck_ids
+    ignition_access = IGNITION_ENERGY in hand_ids or IGNITION_ENERGY in deck_ids
+
+    if identifier == HONCHKROW:
+        if _attached_energy_cards(card) > 0 and has_fuel:
+            return 240_000
+        if hand_energy > 0 and has_fuel:
+            return 222_000
+        if has_energy_access and has_fuel:
+            return 196_000
+        return 148_000
+
+    if identifier == MURKROW:
+        if has_honchkrow_in_hand and hand_energy > 0 and has_fuel:
+            return 260_000
+        if has_honchkrow_in_hand and has_energy_access and has_fuel:
+            return 232_000
+        if has_honchkrow_in_hand:
+            return 205_000
+        if has_honchkrow_access and has_energy_access:
+            return 168_000
+        if has_honchkrow_access:
+            return 132_000
+        return 72_000
+
+    if identifier == PORYGON2:
+        if not _porygon_development_allowed(player):
+            return 22_000
+        if discard_supporters >= _porygon2_late_trash_threshold():
+            can_attack_or_convert = (
+                _attached_energy_cards(card) > 0
+                or IGNITION_ENERGY in _attached_energy_card_ids(card)
+                or IGNITION_ENERGY in hand_ids
+            )
+            return 280_000 if can_attack_or_convert else 132_000
+        if ignition_access and not has_honchkrow_line:
+            return 118_000
+        if ignition_access:
+            return 84_000
+        return 52_000
+
+    if identifier == PORYGON:
+        if has_honchkrow_line or has_honchkrow_access:
+            return -90_000
+        if porygon2_access and ignition_access:
+            return 66_000
+        if porygon2_access:
+            return 42_000
+        return 18_000
+
+    return 1_000
+
+
+def _choose_promotion_active_card(observation, options, max_count):
+    if max_count != 1:
+        return None
+    select = _read(observation, "select", {})
+    if _select_context(select) not in (4, "promote active pokemon", "context4"):
+        return None
+    candidates = []
+    for option_index, option in enumerate(options):
+        if _option_type(option) not in (3, "card"):
+            continue
+        candidates.append((_promotion_active_card_score(observation, option), option_index))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    best_score, best_index = candidates[0]
+    if best_score <= 0:
+        return None
+    return [best_index]
 
 
 def _move_lock_option_name(option):
@@ -4525,7 +5114,7 @@ def _choose_optional_cards(observation, options, max_count):
     field_ids = _field_card_ids(player)
     field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
     hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
-    deck_ids = [_card_id(card) for card in _iter_cards(_read(player, "deck", []))]
+    deck_ids = _deck_card_ids_for_policy(player)
     active_ids = [_card_id(card) for card in _iter_cards(_read(player, "active", []))]
     active_card = _top_card(_read(player, "active", []))
     active_honchkrow = any(card_id == HONCHKROW for card_id in active_ids)
@@ -4550,6 +5139,7 @@ def _choose_optional_cards(observation, options, max_count):
     search_option_ids = [_card_id(_card_from_option(observation, option)) for option in options]
     search_can_take_proton = PROTON in search_option_ids
     energy_dig_needed = _needs_ariana_energy_dig(player)
+    petrel_energy_bridge = energy_dig_needed and TEAM_ROCKET_ENERGY in deck_ids and TEAM_ROCKET_ENERGY not in hand_ids
     needs_honchkrow_from_pad, needs_porygon2_from_pad, active_pad_evolution = _poke_pad_evolution_attack_need(player, hand_ids)
     porygon_development_allowed = _porygon_development_allowed(player)
     hand_has_compression = any(
@@ -4565,6 +5155,7 @@ def _choose_optional_cards(observation, options, max_count):
         or (MURKROW in field_top_ids and (HONCHKROW in hand_ids or HONCHKROW in deck_ids))
     )
     needs_rocket_feather_fuel = future_honchkrow_line and hand_supporters < 3
+    sakaki_pressure = _sakaki_bench_prize_pressure(observation)
 
     def giovanni_fuel_search_score():
         sakaki_ko_score = _sakaki_two_prize_ko_score(observation, giovanni_from_hand=False)
@@ -4618,6 +5209,8 @@ def _choose_optional_cards(observation, options, max_count):
                     score = max(_poke_pad_target_score(observation, option_card), 2_100 if field_murkrow_lines < desired_murkrow_lines else 260)
                     if active_attack_ready and field_murkrow_lines < 3:
                         score = max(score, 40_000)
+                    if sakaki_pressure:
+                        score = max(score, 52_000 if field_murkrow_lines < 2 else 18_000)
                 elif identifier == HONCHKROW:
                     score = max(
                         _poke_pad_target_score(observation, option_card),
@@ -4627,11 +5220,19 @@ def _choose_optional_cards(observation, options, max_count):
                         score += _policy_rule_number("pokePadEvolutionAttack", "honchkrowWithEnergyInHandScore", 12_000)
                     if active_pad_evolution and identifier == HONCHKROW:
                         score += _policy_rule_number("pokePadEvolutionAttack", "activeEvolutionBonus", 2_800)
+                    if sakaki_pressure and MURKROW in field_top_ids:
+                        score = max(score, 42_000)
                 elif identifier == PORYGON:
                     score = max(_poke_pad_target_score(observation, option_card), 1_650 if field_porygon_lines < 1 else 220)
                 elif identifier == PORYGON2:
                     if not porygon_development_allowed:
                         score = 260
+                    elif discard_supporters >= _porygon2_late_trash_threshold() and field_porygon_lines > 0:
+                        score = max(_poke_pad_target_score(observation, option_card), 96_000)
+                        if needs_porygon2_from_pad:
+                            score += _policy_rule_number("pokePadEvolutionAttack", "porygon2WithIgnitionInHandScore", 11_800)
+                        if active_pad_evolution:
+                            score += _policy_rule_number("pokePadEvolutionAttack", "activeEvolutionBonus", 2_800)
                     elif _honchkrow_chain_available(player, hand_ids, deck_ids) and not _only_porygon_board(player) and not active_pad_evolution:
                         score = 520
                     else:
@@ -4656,7 +5257,9 @@ def _choose_optional_cards(observation, options, max_count):
                     if energy_murkrow_needs_honchkrow:
                         score -= 2_700
                 elif identifier == PETREL:
-                    if petrel_attack_bridge:
+                    if petrel_energy_bridge:
+                        score += 28_000
+                    elif petrel_attack_bridge:
                         score += 2_900
                     elif ARIANA not in hand_ids and FACTORY not in stadium_ids:
                         score += 1_500
@@ -4679,7 +5282,7 @@ def _choose_optional_cards(observation, options, max_count):
                 elif identifier == ARCHER:
                     score = max(_policy_rule_number("rocketApolloReset", "fuelOnlyScore", 900), _apollo_search_score(observation))
                 elif identifier == PETREL:
-                    score = 24_000
+                    score = 54_000 if petrel_energy_bridge else 24_000
                 elif identifier == GIOVANNI:
                     score = max(14_000, giovanni_fuel_search_score())
                 elif identifier == PROTON:
@@ -4691,7 +5294,7 @@ def _choose_optional_cards(observation, options, max_count):
                     if identifier == ARIANA:
                         score = -8_000
                     elif identifier == PETREL:
-                        score = 18_000 + (5_200 if petrel_attack_bridge else 0)
+                        score = 72_000 if petrel_energy_bridge else 18_000 + (5_200 if petrel_attack_bridge else 0)
                     elif identifier == ARCHER:
                         score = max(18_000, _apollo_search_score(observation))
                     elif identifier == GIOVANNI:
@@ -4702,7 +5305,7 @@ def _choose_optional_cards(observation, options, max_count):
                     if identifier == ARIANA:
                         score = 40_000 + (6_000 if energy_dig_needed or athena_draw_count >= 3 else 0)
                     elif identifier == PETREL:
-                        score = 12_000 + (5_200 if petrel_attack_bridge else 0)
+                        score = 68_000 if petrel_energy_bridge else 12_000 + (5_200 if petrel_attack_bridge else 0)
                     elif identifier == ARCHER:
                         score = _apollo_search_score(observation)
                     elif identifier == GIOVANNI:
@@ -4728,7 +5331,11 @@ def _choose_optional_cards(observation, options, max_count):
                     if energy_murkrow_needs_honchkrow:
                         score -= 3_400
                 elif identifier == PETREL:
-                    if petrel_attack_bridge:
+                    if petrel_energy_bridge and not supporter_played:
+                        score += 30_000
+                    elif petrel_energy_bridge and ARIANA in search_option_ids:
+                        score -= 1_400
+                    elif petrel_attack_bridge:
                         score += 5_600
                     elif ARIANA not in hand_ids and FACTORY not in stadium_ids:
                         score += 1_800
@@ -4745,6 +5352,8 @@ def _choose_optional_cards(observation, options, max_count):
                 petrel_should_chain_factory = ARIANA not in hand_ids and FACTORY not in stadium_ids
                 if identifier == POKE_PAD:
                     score += 7_200 if petrel_attack_bridge else (1_100 if needs_setup else 520)
+                    if sakaki_pressure:
+                        score += 90_000
                 elif identifier == TEAM_ROCKET_TRANSCEIVER:
                     score += 2_800 if petrel_attack_bridge else 950
                 elif identifier == POKEGEAR:
@@ -4766,12 +5375,28 @@ def _choose_optional_cards(observation, options, max_count):
                         score += _policy_rule_number("preferArianaEnergyDig", "petrelArianaBonus", 4_600)
                 elif identifier == PETREL:
                     score -= 450
+                elif identifier == TEAM_ROCKET_ENERGY:
+                    if energy_dig_needed:
+                        score = 260_000 if counts.get(TEAM_ROCKET_ENERGY, 0) <= 0 else 42_000
+                    else:
+                        score += 1_600
+                    if sakaki_pressure and counts.get(TEAM_ROCKET_ENERGY, 0) <= 0:
+                        score += 58_000
+                elif identifier == IGNITION_ENERGY:
+                    if energy_dig_needed:
+                        score = 120_000 if counts.get(IGNITION_ENERGY, 0) <= 0 else 18_000
+                    else:
+                        score += 900
+                    if sakaki_pressure and counts.get(TEAM_ROCKET_ENERGY, 0) > 0 and counts.get(IGNITION_ENERGY, 0) <= 0:
+                        score += 18_000
                 elif identifier == GIOVANNI:
                     score = giovanni_fuel_search_score()
                 elif identifier == ARCHER:
                     score = _apollo_search_score(observation)
                 elif identifier == NIGHT_STRETCHER:
                     score += max(0, _best_night_stretcher_target_score(observation) // 60)
+                    if sakaki_pressure:
+                        score += 54_000
             elif effect == MURKROW:
                 if identifier not in ROCKET_SUPPORTERS:
                     score = -100_000
@@ -4800,7 +5425,7 @@ def _choose_optional_cards(observation, options, max_count):
                     else:
                         score -= _policy_rule_number("preferProtonWhenSetupIncomplete", "settledSearchPenalty", 50_000)
                 elif identifier == PETREL:
-                    score += 800
+                    score += 18_000 if petrel_energy_bridge else 800
                 elif identifier == GIOVANNI:
                     score = giovanni_fuel_search_score()
                 elif identifier == ARCHER:
@@ -4833,6 +5458,9 @@ def _choose_optional_multi_select(observation, options, max_count):
     mulligan_bonus_draw = _choose_mulligan_bonus_draw(observation, options, max_count)
     if mulligan_bonus_draw is not None:
         return mulligan_bonus_draw
+    promotion_active = _choose_promotion_active_card(observation, options, max_count)
+    if promotion_active is not None:
+        return promotion_active
     taunt_lock = _choose_taunt_move_lock_option(observation, options, max_count)
     if taunt_lock is not None:
         return taunt_lock
@@ -4857,13 +5485,13 @@ def _main_action_score(observation, option, turn_plan=None):
     field_top_cards = _field_top_cards(player)
     field_top_ids = [_card_id(field_card) for field_card in field_top_cards]
     hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
-    deck_ids = [_card_id(card) for card in _iter_cards(_read(player, "deck", []))]
+    deck_ids = _deck_card_ids_for_policy(player)
     active_ids = [_card_id(card) for card in _iter_cards(_read(player, "active", []))]
     active_card = _top_card(_read(player, "active", []))
     hand_count = _hand_count(player)
     hand_supporters = _count_cards(player, ("hand",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     hand_energy = _count_cards(player, ("hand",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
-    deck_energy = _count_cards(player, ("deck",), lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
+    deck_energy = _deck_card_count_for_policy(player, lambda card_id: card_id in (TEAM_ROCKET_ENERGY, IGNITION_ENERGY))
     discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
     deck_count = _deck_count(player)
     opponent = _player_state(current, 1 - your_index)
@@ -4911,9 +5539,10 @@ def _main_action_score(observation, option, turn_plan=None):
     first_proton_search_pending = first_proton_pending and PROTON not in hand_ids and not supporter_played
     early_turn = _safe_int(_read(current, "turn"), 0) <= _policy_rule_number("preferProtonWhenSetupIncomplete", "earlyTurnMax", 4)
     opponent_active_hp = _remaining_hp(_opponent_active_card(observation))
-    ariana_compression_available = _has_ariana_compression_option(observation)
+    draw_supporter_compression_available = _has_ariana_compression_option(observation)
     energy_murkrow_needs_honchkrow = _energy_prepared_murkrow_needs_honchkrow(player, hand_ids, deck_ids)
     energy_dig_needed = _needs_ariana_energy_dig(player)
+    petrel_energy_bridge = energy_dig_needed and TEAM_ROCKET_ENERGY in deck_ids and TEAM_ROCKET_ENERGY not in hand_ids
     needs_honchkrow_from_pad, needs_porygon2_from_pad, active_pad_evolution = _poke_pad_evolution_attack_need(player, hand_ids)
     porygon_development_allowed = _porygon_development_allowed(player)
     petrel_attack_bridge = energy_murkrow_needs_honchkrow or needs_honchkrow_from_pad or needs_porygon2_from_pad or active_pad_evolution
@@ -4932,11 +5561,20 @@ def _main_action_score(observation, option, turn_plan=None):
     ariana_compression_needed = (
         ariana_desired
         and _policy_rule_enabled("compressBeforeAriana")
-        and hand_count >= _policy_rule_number("compressBeforeAriana", "compressionHandMin", 6)
-        and ariana_compression_available
+        and draw_supporter_compression_available
     )
+    apollo_compression_needed = (
+        ARCHER in hand_ids
+        and not supporter_played
+        and _policy_rule_enabled("compressBeforeAriana")
+        and draw_supporter_compression_available
+        and _apollo_reset_score(observation, assume_legal=True, apollo_from_hand=True) > 0
+    )
+    draw_supporter_compression_needed = ariana_compression_needed or apollo_compression_needed
     factory_pending_after_supporter = supporter_played and not stadium_played and _factory_option_available(observation)
     factory_before_ariana_score = _factory_before_ariana_score(observation)
+    only_ariana_rocket_feather_fuel = _only_ariana_rocket_feather_fuel(player)
+    hop_dodge_protected_active = _opponent_active_has_hop_dodge_protection(observation)
 
     if option_type in (14, "end"):
         return -20_000
@@ -4970,6 +5608,13 @@ def _main_action_score(observation, option, turn_plan=None):
     if option_type in (13, "attack"):
         if seed_guard_has_basic and _needs_seed_out_bench_guard(player):
             return -75_000
+        if hop_dodge_protected_active:
+            if attack_id == ROCKET_FEATHER_ATTACK:
+                return -64_000
+            if attack_id in PORYGON2_R_COMMAND_ATTACKS:
+                return -42_000
+            if attack_id == TAUNT_ATTACK:
+                return -28_000
         if thin_board_guard and basic_continuity_option and not (turn_plan is not None and turn_plan.game_end):
             if attack_id in MURKROW_ATTACKS:
                 return -82_000
@@ -5020,11 +5665,14 @@ def _main_action_score(observation, option, turn_plan=None):
                 score -= _policy_rule_number("avoidNonKoRocketFeatherIntoHealing", "setupOrSwitchPenalty", 1_600)
             if planned_score and turn_plan is not None and (turn_plan.can_ko or turn_plan.game_end):
                 return max(score, planned_score)
-            if active_has_ignition_energy and hand_supporters > 0 and not factory_pending_after_supporter:
+            preserve_only_ariana_fuel = only_ariana_rocket_feather_fuel and not can_ko
+            if preserve_only_ariana_fuel:
+                score = min(score, -24_000)
+            if active_has_ignition_energy and hand_supporters > 0 and not factory_pending_after_supporter and not preserve_only_ariana_fuel:
                 score = max(score, 1_800 + min(hand_supporters, 3) * 900)
             if hand_supporters >= 2 and not factory_pending_after_supporter:
                 score = max(score, 2_400 + min(hand_supporters, 3) * 500)
-            if urgent_attack_window and not factory_pending_after_supporter:
+            if urgent_attack_window and not factory_pending_after_supporter and not preserve_only_ariana_fuel:
                 attack_floor = 5_200 + min(hand_supporters, 3) * 900
                 if opponent_prizes <= 1:
                     attack_floor += 3_600
@@ -5040,7 +5688,11 @@ def _main_action_score(observation, option, turn_plan=None):
                 if turn_plan is not None and turn_plan.attacker_index == 0 and turn_plan.attack_id in PORYGON2_R_COMMAND_ATTACKS
                 else 0
             )
-            damage = discard_supporters * _policy_rule_number("porygon2RCommandFallback", "damagePerTrashRocketSupporter", 20)
+            damage = _damage_after_type_modifier(
+                discard_supporters * _policy_rule_number("porygon2RCommandFallback", "damagePerTrashRocketSupporter", 20),
+                _opponent_active_card(observation),
+                "colorless",
+            )
             if damage <= 0:
                 return _policy_rule_number("porygon2RCommandFallback", "zeroDamageScore", -12_000)
             porygon2_bridge_window = (
@@ -5059,13 +5711,15 @@ def _main_action_score(observation, option, turn_plan=None):
                     porygon2_bridge_bonus += 4_200
                 elif hand_supporters <= 1:
                     porygon2_bridge_bonus += 1_800
-            if opponent_active_hp > 0 and damage >= opponent_active_hp:
+            porygon2_can_ko = opponent_active_hp > 0 and damage >= opponent_active_hp
+            late_trash_bonus = _porygon2_late_trash_bonus(discard_supporters, damage, porygon2_can_ko)
+            if porygon2_can_ko:
                 score = (
                     _policy_rule_number("porygon2RCommandFallback", "koScore", 14_800) +
                     min(discard_supporters, 6) *
                     _policy_rule_number("porygon2RCommandFallback", "koPerSupporterScore", 250)
                 )
-                score += porygon2_bridge_bonus
+                score += porygon2_bridge_bonus + late_trash_bonus
                 return max(score, planned_score)
             score = (
                 _policy_rule_number("porygon2RCommandFallback", "nonKoBaseScore", 6_200) +
@@ -5073,11 +5727,18 @@ def _main_action_score(observation, option, turn_plan=None):
                 _policy_rule_number("porygon2RCommandFallback", "nonKoPerSupporterScore", 520)
             )
             score += min(damage, 180) * 18
-            score += porygon2_bridge_bonus
+            score += porygon2_bridge_bonus + late_trash_bonus
             if deck_count <= _policy_rule_number("porygon2RCommandFallback", "lowDeckThreshold", 10):
                 score -= _policy_rule_number("porygon2RCommandFallback", "lowDeckPenalty", 2_800)
             if urgent_attack_window and damage >= 40:
                 attack_floor = 5_400 + min(discard_supporters, 6) * 550
+                if discard_supporters >= _porygon2_late_trash_threshold():
+                    attack_floor += _policy_rule_number("porygon2RCommandFallback", "lateTrashAttackBonus", 36_000) // 2
+                    attack_floor += max(0, discard_supporters - _porygon2_late_trash_threshold()) * _policy_rule_number(
+                        "porygon2RCommandFallback",
+                        "lateTrashPerExtraSupporterScore",
+                        1_400,
+                    )
                 if opponent_prizes <= 1:
                     attack_floor += 3_200
                 if self_prizes <= 2:
@@ -5128,7 +5789,7 @@ def _main_action_score(observation, option, turn_plan=None):
     if option_type in (9, "evolve"):
         if seed_guard_has_basic and _needs_seed_out_bench_guard(player):
             return -42_000
-        if ariana_compression_needed and _is_ariana_compression_option(observation, option):
+        if draw_supporter_compression_needed and _is_ariana_compression_option(observation, option):
             return 28_000
         if identifier == HONCHKROW:
             score = 10_500
@@ -5150,6 +5811,13 @@ def _main_action_score(observation, option, turn_plan=None):
         if identifier == PORYGON2:
             if not porygon_development_allowed:
                 return 1_800
+            if discard_supporters >= _porygon2_late_trash_threshold():
+                score = 58_000 if target_id == PORYGON else 28_000
+                if target_is_active:
+                    score += 24_000
+                if target_energy_cards > 0 or IGNITION_ENERGY in hand_ids:
+                    score += 18_000
+                return score
             if _honchkrow_chain_available(player, hand_ids, deck_ids) and not _only_porygon_board(player):
                 return 2_400
             if _only_porygon_board(player):
@@ -5174,6 +5842,13 @@ def _main_action_score(observation, option, turn_plan=None):
             )
             if opening_attach_score is not None:
                 return opening_attach_score
+        if identifier == IGNITION_ENERGY and hop_dodge_protected_active:
+            if target_id in (HONCHKROW, PORYGON2) and (
+                target_is_active
+                or has_switch_option
+                or (turn_plan is not None and _option_targets_plan_attacker(target, turn_plan))
+            ):
+                return min(_policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000), -32_000)
         if (
             turn_plan is not None
             and not turn_plan.seed_guard_blocked
@@ -5187,6 +5862,13 @@ def _main_action_score(observation, option, turn_plan=None):
                 return plan_attach_score
             if identifier == IGNITION_ENERGY and turn_plan.attacker_id in (HONCHKROW, PORYGON2):
                 if target_is_active or turn_plan.needs_switch or has_switch_option:
+                    if (
+                        turn_plan.attacker_id == HONCHKROW
+                        and turn_plan.attack_id == ROCKET_FEATHER_ATTACK
+                        and not turn_plan.can_ko
+                        and only_ariana_rocket_feather_fuel
+                    ):
+                        return min(_policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000), -28_000)
                     if turn_plan.attacker_id == HONCHKROW and TEAM_ROCKET_ENERGY in hand_ids:
                         return 600
                     return plan_attach_score
@@ -5251,9 +5933,11 @@ def _main_action_score(observation, option, turn_plan=None):
                 if hand_supporters <= 0:
                     return 700
                 if not target_is_active and not has_switch_option:
-                    return _policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000)
+                    return _policy_rule_number("avoidIgnitionWaste", "benchWithoutSwitchPenalty", -15_000)
                 score = _policy_rule_number("avoidIgnitionWaste", "honchkrowActiveAttackScore", 15_800) if target_is_active else _policy_rule_number("avoidIgnitionWaste", "honchkrowSwitchableAttackScore", 10_200)
                 required_for_ko = max(1, (opponent_active_hp + 59) // 60) if opponent_active_hp > 0 else 1
+                if only_ariana_rocket_feather_fuel and hand_supporters < required_for_ko:
+                    return min(_policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000), -28_000)
                 if hand_supporters >= required_for_ko:
                     score += 9_500
                 score += min(hand_supporters, 4) * 850
@@ -5278,7 +5962,7 @@ def _main_action_score(observation, option, turn_plan=None):
     if option_type in (7, "play"):
         if seed_guard_play_score is not None:
             return seed_guard_play_score
-        if ariana_compression_needed and _is_ariana_compression_option(observation, option):
+        if draw_supporter_compression_needed and _is_ariana_compression_option(observation, option):
             return 26_000
         if identifier == MURKROW:
             if active_attack_ready and bench_count < _bench_limit(player):
@@ -5299,6 +5983,8 @@ def _main_action_score(observation, option, turn_plan=None):
         if identifier == PORYGON2:
             if not porygon_development_allowed:
                 return 800
+            if discard_supporters >= _porygon2_late_trash_threshold():
+                return 42_000 if porygon_lines > 0 else 8_000
             if _honchkrow_chain_available(player, hand_ids, deck_ids) and not _only_porygon_board(player):
                 return 600
             if _only_porygon_board(player):
@@ -5319,6 +6005,8 @@ def _main_action_score(observation, option, turn_plan=None):
                 return -7_500
             petrel_factory_bridge = ARIANA not in hand_ids and FACTORY not in stadium_ids
             score = 1_400
+            if petrel_energy_bridge:
+                score += 34_000
             if petrel_attack_bridge:
                 score += 8_600
             if petrel_factory_bridge:
@@ -5327,13 +6015,13 @@ def _main_action_score(observation, option, turn_plan=None):
                 score += 1_700
             if energy_murkrow_needs_honchkrow:
                 score += 2_900
-            if not petrel_attack_bridge and not petrel_factory_bridge:
+            if not petrel_energy_bridge and not petrel_attack_bridge and not petrel_factory_bridge:
                 score -= 6_800
             if energy_dig_needed:
-                score -= 7_800 if ARIANA in hand_ids else 2_800
+                score += 13_000 if petrel_energy_bridge else -(7_800 if ARIANA in hand_ids else 2_800)
             if setup_incomplete and (PROTON in hand_ids or TEAM_ROCKET_TRANSCEIVER in hand_ids or POKE_PAD in hand_ids):
                 score -= 3_200
-            if hand_count <= 5 and hand_energy <= 0:
+            if hand_count <= 5 and hand_energy <= 0 and not petrel_energy_bridge:
                 score -= 2_400
             return score
         if identifier == TEAM_ROCKET_TRANSCEIVER:
@@ -5420,14 +6108,6 @@ def _main_action_score(observation, option, turn_plan=None):
                 score += 7_500
             if has_rocket_feather_action and hand_supporters < 3:
                 score += 3_500
-            score += _factory_ariana_burst_score(
-                observation,
-                player,
-                current,
-                athena_draw_count,
-                hand_ids,
-                stadium_ids,
-            )
             if FACTORY in [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]:
                 score += 1_300
             score += max(0, 3 - hand_supporters) * 1_350
@@ -5439,7 +6119,7 @@ def _main_action_score(observation, option, turn_plan=None):
             if _policy_rule_enabled("compressBeforeAriana"):
                 if athena_draw_count <= _policy_rule_number("compressBeforeAriana", "lowDrawMax", 2) and hand_count >= _policy_rule_number("compressBeforeAriana", "highHandMin", 7):
                     score -= _policy_rule_number("compressBeforeAriana", "lowDrawPenalty", 12_000)
-                if ariana_compression_available and hand_count >= _policy_rule_number("compressBeforeAriana", "compressionHandMin", 6):
+                if draw_supporter_compression_available:
                     score -= _policy_rule_number("compressBeforeAriana", "compressionPenalty", 8_500)
             score += _supporter_energy_dig_score_adjustment(current, player, ARIANA, apollo_from_hand=True)
             if proton_opening_allowed and early_turn and (PROTON in hand_ids or TEAM_ROCKET_TRANSCEIVER in hand_ids or POKE_PAD in hand_ids):
@@ -5455,6 +6135,8 @@ def _main_action_score(observation, option, turn_plan=None):
         if identifier == ARCHER:
             if supporter_played:
                 return -7_500
+            if apollo_compression_needed:
+                return -18_000
             apollo_score = _apollo_reset_score(observation, assume_legal=True, apollo_from_hand=True)
             energy_dig_adjustment = _supporter_energy_dig_score_adjustment(current, player, ARCHER, apollo_from_hand=True)
             if apollo_score > 0:
@@ -5499,6 +6181,210 @@ def _main_action_score(observation, option, turn_plan=None):
     return 0
 
 
+def _pre_support_board_development_score(observation, option, turn_plan=None, draw_reset_supporter_pending=False):
+    current, _, player = _current_player(observation)
+    if _supporter_played_this_turn(current, player):
+        return None
+    if turn_plan is not None and turn_plan.game_end:
+        return None
+
+    option_type = _option_type(option)
+    card = _card_from_option(observation, option)
+    identifier = _card_id(card)
+    if identifier is None:
+        return None
+
+    hand_ids = [_card_id(hand_card) for hand_card in _iter_cards(_read(player, "hand", []))]
+    deck_ids = _deck_card_ids_for_policy(player)
+    field_top_ids = [_card_id(field_card) for field_card in _field_top_cards(player)]
+    discard_supporters = _count_cards(player, ("discard",), lambda card_id: card_id in ROCKET_SUPPORTERS)
+    bench_count = _bench_top_count(player)
+    free_bench = bench_count < _bench_limit(player)
+
+    if option_type in (9, "evolve"):
+        main_score = _main_action_score(observation, option, turn_plan)
+        if main_score <= 0:
+            return None
+        if identifier == HONCHKROW:
+            return 180_000 + min(main_score, 60_000)
+        if identifier == PORYGON2 and _porygon_development_allowed(player):
+            if discard_supporters >= _porygon2_late_trash_threshold():
+                return 170_000 + min(main_score, 80_000)
+            if _honchkrow_chain_available(player, hand_ids, deck_ids) and not _only_porygon_board(player):
+                return None
+            return 95_000 + min(main_score, 40_000)
+        return None
+
+    if option_type not in (7, "play"):
+        return None
+
+    if identifier == MURKROW and free_bench:
+        line_count = field_top_ids.count(MURKROW) + field_top_ids.count(HONCHKROW)
+        if line_count >= 3:
+            return None
+        return 135_000 - line_count * 8_000
+
+    if identifier == PORYGON and free_bench:
+        if PORYGON in field_top_ids or PORYGON2 in field_top_ids:
+            return None
+        return 92_000
+
+    if identifier == POKE_PAD:
+        target_score = _best_poke_pad_target_score(observation)
+        if draw_reset_supporter_pending:
+            return 82_000 + max(0, min(target_score, 180_000) // 12)
+        if target_score < 75_000:
+            return None
+        return 78_000 + min(target_score // 10, 28_000)
+
+    if identifier in (TEAM_ROCKET_TRANSCEIVER, POKEGEAR, ROTO_STICK):
+        if draw_reset_supporter_pending:
+            base_scores = {
+                TEAM_ROCKET_TRANSCEIVER: 86_000,
+                POKEGEAR: 78_000,
+                ROTO_STICK: 74_000,
+            }
+            return base_scores.get(identifier, 72_000)
+
+    if identifier == NIGHT_STRETCHER:
+        target_score = _best_night_stretcher_target_score(observation)
+        immediate_score = _night_stretcher_immediate_compression_score(observation)
+        if draw_reset_supporter_pending and immediate_score >= 75_000:
+            return 76_000 + min(immediate_score // 10, 30_000)
+        if target_score < 75_000:
+            return None
+        return 72_000 + min(target_score // 10, 26_000)
+
+    return None
+
+
+def _pre_support_board_development_option_index(observation, options, turn_plan=None):
+    current, _, player = _current_player(observation)
+    if _supporter_played_this_turn(current, player):
+        return None
+    draw_reset_supporter_pending = any(
+        _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) in DRAW_RESET_SUPPORTERS
+        for option in options
+    )
+    has_supporter_option = any(
+        _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) in SUPPORTER_CARD_IDS
+        for option in options
+    )
+    if not has_supporter_option:
+        return None
+
+    best = None
+    for option_index, option in enumerate(options):
+        score = _pre_support_board_development_score(observation, option, turn_plan, draw_reset_supporter_pending)
+        if score is None:
+            continue
+        if best is None or score > best[0] or (score == best[0] and option_index < best[1]):
+            best = (score, option_index)
+    return best[1] if best is not None else None
+
+
+def _pre_attack_action_option_index(observation, options, scored):
+    current, _, player = _current_player(observation)
+    supporter_available = not _supporter_played_this_turn(current, player)
+
+    best = None
+    for score, option_index in scored:
+        option = options[option_index]
+        option_type = _option_type(option)
+        if option_type in (13, "attack", 14, "end", 12, "retreat", "switch", "promote"):
+            continue
+
+        identifier = _card_id(_card_from_option(observation, option))
+        if option_type in (7, "play") and identifier in SUPPORTER_CARD_IDS:
+            if not supporter_available:
+                continue
+            if identifier in (PROTON, GIOVANNI) and score <= 0:
+                continue
+            if identifier == ARCHER and score < 0:
+                continue
+            if identifier in (ARIANA, PETREL) and score < -6_500:
+                continue
+        elif score <= 0:
+            continue
+
+        priority = 0
+        if option_type in (9, "evolve"):
+            priority = 7
+        elif option_type in (7, "play") and identifier in (ARIANA, PETREL, ARCHER):
+            priority = 6
+        elif option_type in (7, "play") and identifier in (POKE_PAD, NIGHT_STRETCHER, TEAM_ROCKET_TRANSCEIVER, POKEGEAR, ROTO_STICK):
+            priority = 5
+        elif identifier == FACTORY:
+            priority = 4
+        elif option_type in (8, "attach"):
+            priority = 3
+        elif option_type in (7, "play", 10, "ability"):
+            priority = 2
+
+        candidate = (priority, score, -option_index, option_index)
+        if best is None or candidate > best:
+            best = candidate
+
+    return best[3] if best is not None else None
+
+
+def _sakaki_support_phase_option_index(observation, options, scored, turn_plan):
+    current, _, player = _current_player(observation)
+    if _supporter_played_this_turn(current, player):
+        return None
+
+    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
+    if GIOVANNI not in hand_ids:
+        return None
+
+    giovanni_option_index = None
+    for option_index, option in enumerate(options):
+        if _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) == GIOVANNI:
+            giovanni_option_index = option_index
+            break
+
+    if giovanni_option_index is not None and _sakaki_two_prize_ko_score(observation, giovanni_from_hand=True) is not None:
+        return giovanni_option_index
+
+    if not _sakaki_bench_prize_pressure(observation):
+        return None
+
+    best_overall = scored[0] if scored else None
+    if best_overall is not None:
+        best_option = options[best_overall[1]]
+        if _option_type(best_option) in (13, "attack") and turn_plan is not None and turn_plan.game_end:
+            return None
+
+    candidate = None
+    for score, option_index in scored:
+        option = options[option_index]
+        option_type = _option_type(option)
+        identifier = _card_id(_card_from_option(observation, option))
+        target = _target_card_from_option(observation, option)
+        target_id = _card_id(target)
+        priority = 0
+
+        if option_type in (9, "evolve") and identifier in (HONCHKROW, PORYGON2):
+            priority = 8
+        elif option_type in (7, "play") and identifier in (POKE_PAD, NIGHT_STRETCHER):
+            priority = 7
+        elif option_type in (7, "play") and identifier == MURKROW:
+            priority = 6
+        elif option_type in (8, "attach") and target_id in (HONCHKROW, MURKROW, PORYGON2):
+            priority = 5
+        elif option_type in (7, "play") and identifier == PETREL and score > 0:
+            priority = 4
+
+        if priority <= 0 or score <= 0:
+            continue
+
+        ranked = (priority, score, -option_index, option_index)
+        if candidate is None or ranked > candidate:
+            candidate = ranked
+
+    return candidate[3] if candidate is not None else None
+
+
 def _choose_donkrow_main_action(observation, options):
     select = _read(observation, "select", {})
     if _select_context(select) not in (0, "main"):
@@ -5506,22 +6392,27 @@ def _choose_donkrow_main_action(observation, options):
 
     current, _, player = _current_player(observation)
     supporter_played = _supporter_played_this_turn(current, player)
+    turn_plan = _build_donkrow_turn_plan(observation)
 
     if supporter_played:
         for option_index, option in enumerate(options):
             if _card_id(_card_from_option(observation, option)) == FACTORY and _option_type(option) in (10, "ability"):
                 return option_index
 
+    pre_support_development_index = _pre_support_board_development_option_index(observation, options, turn_plan)
+    if pre_support_development_index is not None:
+        return pre_support_development_index
+
     factory_before_ariana_index = _factory_before_ariana_option_index(observation, options)
     if factory_before_ariana_index is not None:
         return factory_before_ariana_index
 
-    has_athena_option = any(
-        _card_id(_card_from_option(observation, option)) == ARIANA
+    has_draw_reset_supporter_option = any(
+        _card_id(_card_from_option(observation, option)) in DRAW_RESET_SUPPORTERS
         for option in options
     )
 
-    if has_athena_option:
+    if has_draw_reset_supporter_option:
         for option_index, option in enumerate(options):
             identifier = _card_id(_card_from_option(observation, option))
             option_type = _option_type(option)
@@ -5531,10 +6422,15 @@ def _choose_donkrow_main_action(observation, options):
         for option_index, option in enumerate(options):
             if _option_type(option) in (8, "attach"):
                 target = _target_card_from_option(observation, option)
-                if _card_id(target) in (HONCHKROW, PORYGON2):
+                target_id = _card_id(target)
+                score = _main_action_score(observation, option, turn_plan)
+                if score <= 0:
+                    continue
+                if target_id in (HONCHKROW, MURKROW):
+                    return option_index
+                if target_id == PORYGON2 and turn_plan is not None and _option_targets_plan_attacker(target, turn_plan):
                     return option_index
 
-    turn_plan = _build_donkrow_turn_plan(observation)
     scored = []
     for option_index, option in enumerate(options):
         scored.append((_main_action_score(observation, option, turn_plan), option_index))
@@ -5543,6 +6439,39 @@ def _choose_donkrow_main_action(observation, options):
 
     scored.sort(key=lambda item: (-item[0], item[1]))
     best_score, best_index = scored[0]
+    best_option = options[best_index]
+    best_identifier = _card_id(_card_from_option(observation, best_option))
+    best_option_type = _option_type(best_option)
+
+    sakaki_support_phase_index = _sakaki_support_phase_option_index(observation, options, scored, turn_plan)
+    if sakaki_support_phase_index is not None:
+        return sakaki_support_phase_index
+
+    if best_option_type in (13, "attack") and not (turn_plan is not None and turn_plan.game_end):
+        pre_attack_index = _pre_attack_action_option_index(observation, options, scored)
+        if pre_attack_index is not None:
+            return pre_attack_index
+
+    if best_score > 0 and best_identifier == ARCHER and best_option_type in (7, "play"):
+        for option_index, option in enumerate(options):
+            identifier = _card_id(_card_from_option(observation, option))
+            option_type = _option_type(option)
+            if option_type in (9, "evolve") and identifier in (HONCHKROW, PORYGON2):
+                if _main_action_score(observation, option, turn_plan) > 0:
+                    return option_index
+
+        for option_index, option in enumerate(options):
+            if _option_type(option) in (8, "attach"):
+                target = _target_card_from_option(observation, option)
+                target_id = _card_id(target)
+                score = _main_action_score(observation, option, turn_plan)
+                if score <= 0:
+                    continue
+                if target_id in (HONCHKROW, MURKROW):
+                    return option_index
+                if target_id == PORYGON2 and turn_plan is not None and _option_targets_plan_attacker(target, turn_plan):
+                    return option_index
+
     if best_score > 0:
         return best_index
     if best_score == 0:
@@ -5576,7 +6505,11 @@ def _sanitize_action(indices, min_count, max_count, option_count):
 def agent(obs_dict):
     select = _select_payload(obs_dict)
     if _is_initial_deck_request(obs_dict, select):
+        _reset_public_knowledge()
         return MY_DECK
+
+    _remember_public_information(obs_dict)
+    _remember_hop_phantump_dodge(obs_dict)
 
     options = _select_options(select)
     min_count, max_count = _selection_bounds(select)
