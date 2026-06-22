@@ -4773,6 +4773,15 @@ def _poke_pad_evolution_attack_need(player, hand_ids):
     return needs_honchkrow, needs_porygon2, active_bonus
 
 
+def _poke_pad_active_evolution_needed(player, hand_ids, deck_ids):
+    active_id = _card_id(_top_card(_read(player, "active", [])))
+    if active_id == MURKROW:
+        return HONCHKROW not in hand_ids and HONCHKROW in deck_ids
+    if active_id == PORYGON and _porygon_development_allowed(player):
+        return PORYGON2 not in hand_ids and PORYGON2 in deck_ids
+    return False
+
+
 def _supporter_played_this_turn(current, player):
     return bool(
         _read(player, "supporterPlayed", False)
@@ -6310,6 +6319,14 @@ def _pre_support_board_development_option_index(observation, options, turn_plan=
     current, _, player = _current_player(observation)
     if _supporter_played_this_turn(current, player):
         return None
+
+    hand_ids = [_card_id(card) for card in _iter_cards(_read(player, "hand", []))]
+    deck_ids = _deck_card_ids_for_policy(player)
+    if _poke_pad_active_evolution_needed(player, hand_ids, deck_ids):
+        for option_index, option in enumerate(options):
+            if _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) == POKE_PAD:
+                return option_index
+
     draw_reset_supporter_pending = any(
         _option_type(option) in (7, "play") and _card_id(_card_from_option(observation, option)) in DRAW_RESET_SUPPORTERS
         for option in options
