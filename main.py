@@ -2655,7 +2655,10 @@ DARK_WEAK_NAME_HINTS = (
     "alakazam",
     "mewtwo",
 )
-TWO_PRIZE_POKEMON_IDS = {
+# Prize count table generated with the same card-id discipline as weakness data:
+# Pokemon cards with explicit ex/EX prize rules are listed here by competition id.
+PRIZE_COUNT_IDS_BY_VALUE = {
+    2: {
     24, 29, 30, 37, 40, 44, 46, 52, 63, 75, 79, 80, 83, 84, 96, 99,
     107, 108, 117, 121, 125, 130, 138, 139, 140, 141, 150, 153, 154, 161, 176, 179,
     184, 189, 190, 193, 198, 205, 207, 210, 223, 229, 231, 232, 236, 239, 241, 243,
@@ -2665,8 +2668,15 @@ TWO_PRIZE_POKEMON_IDS = {
     648, 652, 662, 678, 687, 695, 723, 737, 747, 754, 756, 766, 772, 781, 790, 795,
     806, 813, 828, 835, 849, 861, 868, 886, 896, 904, 911, 919, 928, 932, 939, 944,
     951, 954, 957, 962, 968, 969, 975, 979, 984, 988, 990, 993, 997, 1002, 1006, 1022,
-    1026, 1031, 1040, 1056, 1062, 1064, 1071, 1145,
+    1026, 1031, 1040, 1056, 1062, 1064, 1071,
+    },
 }
+PRIZE_COUNT_BY_CARD_ID = {
+    card_id: prize_count
+    for prize_count, card_ids in PRIZE_COUNT_IDS_BY_VALUE.items()
+    for card_id in card_ids
+}
+TWO_PRIZE_POKEMON_IDS = PRIZE_COUNT_IDS_BY_VALUE[2]
 
 
 def load_deck():
@@ -3871,8 +3881,9 @@ def _prize_count_for_knockout(card):
                 return parsed
 
     identifier = _card_id(card)
-    if identifier in TWO_PRIZE_POKEMON_IDS:
-        return 2
+    table_prize_count = PRIZE_COUNT_BY_CARD_ID.get(identifier)
+    if table_prize_count is not None:
+        return table_prize_count
 
     text = " ".join(
         [
