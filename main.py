@@ -287,6 +287,8 @@ POLICY_CONFIG_JSON = r'''{
       "enabled": true,
       "forbidIgnitionOnMurkrowOrHonchkrow": false,
       "forbidIgnitionOnBasicMurkrow": true,
+      "forbidIgnitionOnRocketReadyMurkrowOrHonchkrow": true,
+      "rocketReadyTargetScore": -120000,
       "allowImmediateIgnitionOnHonchkrow": true,
       "requireActiveOrSwitchForPorygon2": true,
       "honchkrowActiveAttackScore": 15800,
@@ -5916,6 +5918,13 @@ def _main_action_score(observation, option, turn_plan=None):
             ):
                 return min(_policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000), -32_000)
         if (
+            identifier == IGNITION_ENERGY
+            and target_id in (HONCHKROW, MURKROW)
+            and target_has_rocket_energy
+            and _policy_rule_bool("avoidIgnitionWaste", "forbidIgnitionOnRocketReadyMurkrowOrHonchkrow", True)
+        ):
+            return min(_policy_rule_number("avoidIgnitionWaste", "rocketReadyTargetScore", -120_000), -120_000)
+        if (
             turn_plan is not None
             and not turn_plan.seed_guard_blocked
             and turn_plan.needs_energy
@@ -5993,7 +6002,7 @@ def _main_action_score(observation, option, turn_plan=None):
                 if not _policy_rule_bool("avoidIgnitionWaste", "allowImmediateIgnitionOnHonchkrow", True):
                     return _policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000)
                 if target_energy_cards >= 1 or has_rocket_feather_action:
-                    return _policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000)
+                    return min(_policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000), -120_000)
                 if TEAM_ROCKET_ENERGY in hand_ids:
                     return 600
                 if hand_supporters <= 0:
@@ -6009,7 +6018,7 @@ def _main_action_score(observation, option, turn_plan=None):
                 score += min(hand_supporters, 4) * 850
                 return score
             if target_id == MURKROW and _policy_rule_bool("avoidIgnitionWaste", "forbidIgnitionOnBasicMurkrow", True):
-                return _policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000)
+                return min(_policy_rule_number("avoidIgnitionWaste", "forbiddenTargetScore", -16_000), -120_000)
             if target_id == PORYGON2:
                 if IGNITION_ENERGY in target_energy_ids:
                     return _policy_rule_number("avoidIgnitionWaste", "duplicateIgnitionPenalty", -11_000)
